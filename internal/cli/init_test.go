@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -21,7 +22,7 @@ func TestInitScaffoldLintsClean(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("init exit %d: %s", code, errs)
 	}
-	for _, want := range []string{"resources/workspace.yaml", "notes/2026-W43.md", "policy/README.md"} {
+	for _, want := range []string{"resources/workspace.yaml", "notes/2026-W43.md", "policy/README.md", "policy/example/example.rego"} {
 		if !strings.Contains(out, want+"\n") {
 			t.Errorf("init output missing %s:\n%s", want, out)
 		}
@@ -37,6 +38,31 @@ func TestInitScaffoldLintsClean(t *testing.T) {
 	}
 	if !strings.Contains(out, "0 errors") {
 		t.Errorf("summary: %s", out)
+	}
+}
+
+// TestInitExamplePolicyIsLive: the scaffold's example policy loads and fires
+// once you owe one person more than 10 open actions.
+func TestInitExamplePolicyIsLive(t *testing.T) {
+	root := t.TempDir()
+	if code, _, errs := runCLI(t, root, "init"); code != 0 {
+		t.Fatalf("init: %s", errs)
+	}
+	code, out, _ := runCLI(t, root, "--now", "2026-10-21", "lint")
+	if code != 0 || strings.Contains(out, "example-me-backlog") {
+		t.Fatalf("example policy fired on the scaffold (exit %d):\n%s", code, out)
+	}
+	var b strings.Builder
+	b.WriteString("# 2026-10-20\n\n## 1:1 Robin\n")
+	for i := range 11 {
+		fmt.Fprintf(&b, "- [ ] follow up %d @30oct\n", i)
+	}
+	if err := os.WriteFile(filepath.Join(root, "notes", "2026-10-20.md"), []byte(b.String()), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, out, _ = runCLI(t, root, "--now", "2026-10-21", "lint")
+	if !strings.Contains(out, "warning example-me-backlog [robin]: robin: you owe them 12 open actions (more than 10)") {
+		t.Errorf("example policy did not fire:\n%s", out)
 	}
 }
 
