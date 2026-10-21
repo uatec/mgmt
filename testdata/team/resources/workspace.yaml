@@ -1,0 +1,9 @@
+apiVersion: mgmt/v1alpha1
+kind: Workspace
+metadata:
+  name: default
+spec:
+  notes: notes/**/*.md          # glob, relative to repo root
+  me: [me, robert]              # tokens meaning the manager in actions
+  defaultWindow: 90d            # used when no ReviewCycle is active
+  oneToOneCadence: 14d          # default, overridable per Person

@@ -9,11 +9,14 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	mgmt "github.com/uatec/mgmt"
 	"github.com/uatec/mgmt/internal/engine"
 	"github.com/uatec/mgmt/internal/facts"
+	"github.com/uatec/mgmt/internal/render"
 )
 
 const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
@@ -21,6 +24,7 @@ const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
 commands:
   facts                                print the facts document as JSON
   lint [--strict] [--format text|json] print errors and warnings
+  prep <person>                        print the 1:1 prep sheet
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
@@ -47,12 +51,17 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runFacts(rest[1:], root, *now, &buf, stderr)
 	case "lint":
 		code = runLint(rest[1:], root, *now, &buf, stderr)
+	case "prep":
+		code = runPrep(rest[1:], root, *now, &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}
 	if *out == "" {
 		_, _ = stdout.Write(buf.Bytes())
 		return code
+	}
+	if code == 2 && buf.Len() == 0 {
+		return code // failed with nothing to write: leave --out untouched
 	}
 	path := *out
 	if !filepath.IsAbs(path) {
@@ -131,6 +140,114 @@ func runLint(args []string, root, now string, stdout, stderr io.Writer) int {
 	return 0
 }
 
+func runPrep(args []string, root, now string, stdout, stderr io.Writer) int {
+	if len(args) != 1 {
+		return usageError(stderr, "prep takes exactly one person")
+	}
+	return runReport("prep", args[0], root, engine.Options{Now: now}, stdout, stderr)
+}
+
+// runReport runs the pipeline, refuses on errors (the lint text goes to
+// stderr), resolves the person argument when given, and renders the report.
+func runReport(name, personArg, root string, opts engine.Options, stdout, stderr io.Writer) int {
+	res, err := engine.Run(root, opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "mgmt: %v\n", err)
+		return 2
+	}
+	if len(res.Errors) > 0 {
+		_, _ = io.WriteString(stderr, lintText(res.Errors, res.Warnings))
+		return 2
+	}
+	person := ""
+	if personArg != "" {
+		var ok bool
+		if person, ok = resolvePerson(res.Facts, personArg); !ok {
+			fmt.Fprintf(stderr, "mgmt: unknown person %q\n", personArg)
+			return 2
+		}
+	}
+	data, err := reportData(res, name, person, opts)
+	if err != nil {
+		fmt.Fprintf(stderr, "mgmt: %v\n", err)
+		return 2
+	}
+	text, err := render.Render(name, data, mgmt.CoreReports, filepath.Join(root, "reports"))
+	if err != nil {
+		fmt.Fprintf(stderr, "mgmt: %v\n", err)
+		return 2
+	}
+	_, _ = io.WriteString(stdout, text)
+	return 0
+}
+
+// resolvePerson matches arg against Person names and aliases,
+// case-insensitively, and returns the Person's metadata.name.
+func resolvePerson(f facts.Facts, arg string) (string, bool) {
+	names := make([]string, 0, len(f.Resources["Person"]))
+	for name := range f.Resources["Person"] {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		if strings.EqualFold(name, arg) {
+			return name, true
+		}
+		obj, _ := f.Resources["Person"][name].(map[string]any)
+		spec, _ := obj["spec"].(map[string]any)
+		aliases, _ := spec["aliases"].([]any)
+		for _, a := range aliases {
+			if s, ok := a.(string); ok && strings.EqualFold(s, arg) {
+				return name, true
+			}
+		}
+	}
+	return "", false
+}
+
+// reportData is the template data (Ruling R4): view is report[name][person]
+// when a person is given, else report[name]; null when undefined.
+func reportData(res *engine.Result, name, person string, opts engine.Options) (map[string]any, error) {
+	factsDoc, err := plainJSON(res.Facts)
+	if err != nil {
+		return nil, err
+	}
+	var view any = res.Report[name]
+	if person != "" {
+		byPerson, _ := view.(map[string]any)
+		view = byPerson[person]
+	}
+	return map[string]any{
+		"now":    opts.Now,
+		"person": nullable(person),
+		"cycle":  nullable(opts.Cycle),
+		"view":   view,
+		"facts":  factsDoc,
+		"derive": res.Derive,
+	}, nil
+}
+
+func nullable(s string) any {
+	if s == "" {
+		return nil
+	}
+	return s
+}
+
+// plainJSON turns v into maps, slices and json.Numbers, as templates see
+// policy results.
+func plainJSON(v any) (any, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.UseNumber()
+	var out any
+	err = dec.Decode(&out)
+	return out, err
+}
+
 // lintText renders findings one per line, errors and warnings interleaved in
 // file, line, id, person order, followed by a summary line.
 func lintText(errs, warns []facts.Finding) string {
@@ -169,14 +286,8 @@ func plural(n int, word string) string {
 // writeJSON writes v as 2-space indented JSON with sorted keys and a
 // trailing newline, without HTML escaping.
 func writeJSON(w io.Writer, v any) error {
-	b, err := json.Marshal(v)
+	generic, err := plainJSON(v)
 	if err != nil {
-		return err
-	}
-	dec := json.NewDecoder(bytes.NewReader(b))
-	dec.UseNumber()
-	var generic any
-	if err := dec.Decode(&generic); err != nil {
 		return err
 	}
 	enc := json.NewEncoder(w)

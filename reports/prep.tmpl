@@ -1,0 +1,38 @@
+{{- /* 1:1 prep sheet. view = data.mgmt.report.prep[person]. */ -}}
+{{- define "action" -}}
+- [ ] {{if .overdue}}OVERDUE {{.due}}{{else if .due}}{{.due}}{{else}}no due date{{end}} · {{.text}} ({{.file}}:{{.line}})
+{{end -}}
+{{- with .view -}}
+# 1:1 prep: {{.person.displayName}} — {{$.now}}
+{{with .window}}
+Window: {{.from}} to {{.to}} ({{with .cycle}}{{.}}{{else}}rolling{{end}})
+{{end}}
+## Open actions
+
+### Mine
+{{range .actions.mine}}{{template "action" .}}{{else}}- none
+{{end}}
+### Theirs
+{{range .actions.theirs}}{{template "action" .}}{{else}}- none
+{{end}}
+## Since last 1:1 ({{with .lastSection}}{{.}}{{else}}none{{end}})
+{{range .since -}}
+- {{.date}} {{if eq .kind "touch"}}~{{else if eq (toString .polarity) "1"}}+{{else}}-{{end}} {{.competency}} · {{.text}} ({{.file}}:{{.line}})
+{{else}}- none
+{{end}}
+## Gaps
+{{range .gaps -}}
+- {{.status}} {{.competency}} · {{.title}} · {{if .addressedBy}}addressed by {{range $i, $a := .addressedBy}}{{if $i}}, {{end}}{{$a.file}}:{{$a.line}}{{end}}{{else}}not addressed{{end}}
+{{else}}- none
+{{end}}
+## Suggested focus
+{{with .focus -}}
+- {{.competency}} · {{.title}} ({{with .lastTouch}}last touched {{.}}{{else}}never touched{{end}})
+{{else}}- none
+{{end -}}
+{{with .cycle}}
+## Cycle: {{.name}}
+- Next milestone: {{with .nextMilestone}}{{.name}} due {{.due}}{{else}}none{{end}}
+- Missing: {{range $i, $m := .missing}}{{if $i}}, {{end}}{{$m.name}} ({{$m.received}} of {{$m.needed}}){{else}}none{{end}}
+{{end -}}
+{{- end -}}
