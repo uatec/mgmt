@@ -1,0 +1,253 @@
+# Package mgmt.derive turns the facts into the core model: active cycles,
+# evidence windows, required competencies, statuses, gaps and cycle inputs.
+# Every rule is total on schema-valid facts: optional fields go through
+# object.get, and missing references leave a rule undefined rather than error.
+package mgmt.derive
+
+import data.mgmt.lib
+
+_now := object.get(input, "now", "")
+
+_persons := object.get(input, ["resources", "Person"], {})
+
+_frameworks := object.get(input, ["resources", "CompetencyFramework"], {})
+
+_cycles := object.get(input, ["resources", "ReviewCycle"], {})
+
+_default_window := w if {
+	ws := [object.get(x, ["spec", "defaultWindow"], "90d") | some x in object.get(input, ["resources", "Workspace"], {})]
+	count(ws) > 0
+	w := ws[0]
+} else := "90d"
+
+# _sorted_by_loc sorts records ascending by [date, file, line].
+_sorted_by_loc(records) := [r | some pair in sort([[[r.date, r.file, r.line], r] | some r in records]); r := pair[1]]
+
+_framework(p) := _frameworks[_persons[p].spec.framework]
+
+_since(p) := object.get(_persons[p], ["spec", "since"], "")
+
+# --- cycles ---------------------------------------------------------------
+
+# _active_end is the later of period.to and the last milestone's due date.
+_active_end(c) := max({c.spec.period.to} | {m.due | some m in object.get(c, ["spec", "milestones"], [])})
+
+_option_cycle := object.get(input, ["options", "cycle"], "")
+
+active_cycles := [_option_cycle] if _option_cycle != ""
+
+active_cycles := sort([name |
+	some name, c in _cycles
+	c.spec.period.from <= _now
+	_now <= _active_end(c)
+]) if _option_cycle == ""
+
+cycle_people[cy] := sort([p |
+	some p, person in _persons
+	_selects(c, p, person)
+]) if some cy, c in _cycles
+
+_selects(c, p, _) if p in object.get(c, ["spec", "selector", "people"], [])
+
+_selects(c, _, person) if person.spec.role in object.get(c, ["spec", "selector", "matchRoles"], [])
+
+cycle[p] := cys[0] if {
+	some p in object.keys(_persons)
+	cys := [cy | some cy in active_cycles; p in object.get(cycle_people, cy, [])]
+	count(cys) > 0
+}
+
+next_milestone[cy] := {"name": ms[0][1], "due": ms[0][0]} if {
+	some cy, c in _cycles
+	ms := sort([[m.due, m.name] | some m in object.get(c, ["spec", "milestones"], []); m.due >= _now])
+	count(ms) > 0
+}
+
+inputs[cy][p] := [_input_status(cy, p, i) | some i in object.get(c, ["spec", "inputs"], [])] if {
+	some cy, c in _cycles
+	some p in cycle_people[cy]
+}
+
+_input_status(cy, p, i) := {
+	"name": i.name,
+	"required": required,
+	"minCount": min_count,
+	"received": count(records),
+	"complete": _complete(i, count(records)),
+	"records": records,
+} if {
+	required := object.get(i, "required", false)
+	min_count := object.get(i, "minCount", 0)
+	records := _sorted_by_loc([r |
+		some r in object.get(input, "inputs", [])
+		r.cycle == cy
+		r.person == p
+		r.input == i.name
+	])
+}
+
+_complete(i, received) := received >= max({object.get(i, "minCount", 0), 1}) if {
+	_counted(i)
+} else := true
+
+_counted(i) if object.get(i, "required", false) == true
+
+_counted(i) if "minCount" in object.keys(i)
+
+# --- per-person window and settings ---------------------------------------
+
+window[p] := {"from": lib.max_date(from, _since(p)), "to": to, "cycle": cy} if {
+	some p in object.keys(_persons)
+	[from, to, cy] := _window_range(p)
+}
+
+_window_range(p) := [c.spec.period.from, c.spec.period.to, cycle[p]] if {
+	c := _cycles[cycle[p]]
+} else := [lib.add_days(_now, 0 - lib.days(_default_window)), _now, null]
+
+settings[p] := {
+	"minPerCompetency": object.get(ev, "minPerCompetency", 1),
+	"negativeOverrides": object.get(ev, "negativeOverrides", true),
+} if {
+	some p in object.keys(_persons)
+	ev := _cycle_evidence(p)
+}
+
+_cycle_evidence(p) := object.get(_cycles[cycle[p]], ["spec", "evidence"], {}) if {
+	_cycles[cycle[p]]
+} else := {}
+
+# --- competencies and requirements ----------------------------------------
+
+competencies[p] := {c.id: {"id": c.id, "title": c.title, "theme": split(c.id, ".")[0]} |
+	some c in object.get(fw, ["spec", "competencies"], [])
+} if {
+	some p in object.keys(_persons)
+	fw := _framework(p)
+}
+
+# _levels(p) maps level name -> level for the person's role.
+_levels(p) := {l.name: l |
+	some role in object.get(_framework(p), ["spec", "roles"], [])
+	role.name == _persons[p].spec.role
+	some l in object.get(role, "levels", [])
+}
+
+# A competency is required at level L when some level k reachable from L
+# (L included) expects it, and no level j between L and k removes it.
+required[p] := sort([c |
+	some c in {x |
+		some k in reach
+		some x in object.get(levels, [k, "expects"], [])
+		not _removed_between(levels, inherits, reach, k, x)
+	}
+]) if {
+	some p in object.keys(_persons)
+	_framework(p)
+	levels := _levels(p)
+	inherits := {name: [x | x := object.get(l, "inherits", null); x != null] | some name, l in levels}
+	reach := _reach(inherits, _persons[p].spec.level)
+}
+
+_reach(inherits, level) := graph.reachable(inherits, {level}) if inherits[level] else := set()
+
+_removed_between(levels, inherits, reach, k, c) if {
+	some j in reach
+	j != k
+	k in graph.reachable(inherits, {j})
+	c in object.get(levels, [j, "removes"], [])
+}
+
+# --- evidence -------------------------------------------------------------
+
+_evidence_for(p, c) := [e | some e in object.get(input, "evidence", []); e.person == p; e.competency == c]
+
+marks[p][c] := _sorted_by_loc([e |
+	some e in _evidence_for(p, c)
+	window[p].from <= e.date
+	e.date <= window[p].to
+]) if {
+	some p, comps in competencies
+	some c in object.keys(comps)
+}
+
+outside[p][c] := _sorted_by_loc([e |
+	some e in _evidence_for(p, c)
+	e.date >= _since(p)
+	not _in_window(window[p], e.date)
+]) if {
+	some p, comps in competencies
+	some c in object.keys(comps)
+}
+
+_in_window(w, date) if {
+	w.from <= date
+	date <= w.to
+}
+
+status[p][c] := {
+	"status": decision[0],
+	"positives": pos,
+	"negatives": neg,
+	"decidedBy": decision[1],
+	"rule": _rule_name(s.negativeOverrides),
+} if {
+	some p, comps in marks
+	some c, ms in comps
+	s := settings[p]
+	pos := count([m | some m in ms; m.polarity > 0])
+	neg := count([m | some m in ms; m.polarity < 0])
+	decision := _decide(ms, pos, neg, s.minPerCompetency, s.negativeOverrides)
+}
+
+_rule_name(true) := "negativeOverrides"
+
+_rule_name(false) := "counting"
+
+# _decide returns [status, decidedBy].
+_decide(ms, pos, _, minimum, true) := ["unproven", null] if {
+	count(ms) == 0
+} else := ["disproven", _loc(ms[count(ms) - 1])] if {
+	ms[count(ms) - 1].polarity < 0
+} else := ["proven", _loc(ms[count(ms) - 1])] if {
+	pos >= minimum
+} else := ["unproven", null]
+
+_decide(ms, pos, neg, minimum, false) := ["unproven", null] if {
+	count(ms) == 0
+} else := ["proven", null] if {
+	pos > neg
+	pos >= minimum
+} else := ["unproven", null] if {
+	pos > neg
+} else := ["disproven", null]
+
+_loc(m) := {"file": m.file, "line": m.line}
+
+_gap_rank := {"disproven": 0, "unproven": 1}
+
+gaps[p] := [g |
+	some pair in sort([[[_gap_rank[st], c], {"competency": c, "status": st}] |
+		some c in reqs
+		st := status[p][c].status
+		st != "proven"
+	])
+	g := pair[1]
+] if some p, reqs in required
+
+last_touch[p][c] := max(dates) if {
+	some p, comps in competencies
+	some c in object.keys(comps)
+	records := array.concat(_evidence_for(p, c), [t | some t in object.get(input, "touches", []); t.person == p; t.competency == c])
+	dates := {r.date | some r in records; r.date >= _since(p); r.date <= _now}
+	count(dates) > 0
+}
+
+addressed_by[p][c] := _sorted_by_loc([a |
+	some a in object.get(input, "actions", [])
+	a.person == p
+	c in a.addresses
+]) if {
+	some p, comps in competencies
+	some c in object.keys(comps)
+}
