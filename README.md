@@ -7,16 +7,145 @@ resources (CUE), derives statuses and findings (Rego, via the OPA Go SDK) and
 prints reports (Go templates): 1:1 prep sheets, review evidence packs, team
 status. It never modifies your notes.
 
+## Install
+
+You need Go 1.26 or later. From a clone of this repo:
+
+```sh
+go install ./cmd/mgmt          # puts mgmt in $(go env GOPATH)/bin
+```
+
+Or build static binaries for Linux and macOS (amd64 and arm64) with
+`make build`; they land in `dist/mgmt-<os>-<arch>`, and you copy the one you
+need onto your `PATH`. `make test` runs the tests.
+
+mgmt makes no network calls and never writes to your notes or resources.
+
 ## Quick start
+
+Keep your management data in its own directory (ideally its own private git
+repo), separate from this tool:
 
 ```sh
 mkdir my-team && cd my-team
 mgmt init          # writes example resources/, notes/, policy/ and reports/ (never overwrites)
 mgmt lint          # 0 errors on the scaffold
-mgmt prep alex
+mgmt prep alex     # 1:1 prep sheet for the example person
 ```
 
-Build static binaries with `make build` (output in `dist/`); `make test` runs the tests.
+Then replace the example people, framework and cycle with your own (see
+[Resources](#resources)) and start writing weekly notes.
+
+## A workspace
+
+```
+my-team/
+  resources/workspace.yaml      where notes live, defaults
+  resources/framework.yaml      competencies and what each role/level expects
+  resources/people.yaml         your reports
+  resources/cycles/*.yaml       review cycles (optional)
+  notes/2026-W43.md             one markdown file per week (or per day)
+  policy/                       your own Rego policies (optional)
+  reports/                      your own report templates (optional)
+```
+
+Run every command from the workspace root. Files under `resources/` may hold
+any number of YAML documents separated by `---`.
+
+## Resources
+
+All resources share the Kubernetes shape: `apiVersion: mgmt/v1alpha1`, `kind`,
+`metadata.name` (lower-case, used to refer to it) and `spec`. Dates are
+`YYYY-MM-DD`; durations are `<n>d` or `<n>w`.
+
+**Workspace** (exactly one):
+
+```yaml
+apiVersion: mgmt/v1alpha1
+kind: Workspace
+metadata: {name: default}
+spec:
+  notes: notes/**/*.md          # glob, relative to the workspace root
+  me: [me]                      # tokens meaning you in actions (@me)
+  defaultWindow: 90d            # evidence window when no review cycle applies
+  oneToOneCadence: 14d          # how often you expect a 1:1
+```
+
+**CompetencyFramework**: the competencies, the short tokens you write in notes,
+and what each role expects at each level. A level inherits its lower level's
+expectations unless it `removes` them. An id's prefix (`delivery.`) is its
+theme.
+
+```yaml
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata: {name: eng}
+spec:
+  competencies:
+    - {id: delivery.ownership, title: Owns outcomes end to end, tokens: [ownership, own]}
+    - {id: collab.planning, title: Contributes to planning and refinement, tokens: [planning, plan]}
+  roles:
+    - name: engineer
+      levels:
+        - {name: L1, expects: [delivery.ownership]}
+        - {name: L2, inherits: L1, expects: [collab.planning]}
+```
+
+**Person**: one per report. Gaps and statuses are never written here; they
+are derived from your notes.
+
+```yaml
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata: {name: alex}
+spec:
+  displayName: Alex Example
+  aliases: [Alex]               # how you write their name in headings
+  framework: eng
+  role: engineer
+  level: L2
+  since: 2026-09-01             # evidence before this date is ignored
+  oneToOneCadence: 7d           # optional override
+```
+
+**ReviewCycle** (optional): a formal review period. While a cycle is active
+(from `period.from` to its last milestone), its `period` is the evidence
+window for the people it selects; otherwise the rolling `defaultWindow` is used.
+
+```yaml
+apiVersion: mgmt/v1alpha1
+kind: ReviewCycle
+metadata: {name: h2-2026}
+spec:
+  framework: eng
+  period: {from: 2026-07-01, to: 2026-12-31}
+  selector: {people: [alex]}    # or matchRoles: [engineer]
+  evidence: {minPerCompetency: 1, negativeOverrides: true}
+  inputs:                       # things to collect; record receipt with !name in notes
+    - {name: self-assessment, required: true}
+    - {name: peer-feedback, minCount: 3}
+  milestones:
+    - {name: manager-draft, due: 2026-12-01}
+```
+
+A competency is **proven** when it has at least `minPerCompetency` positive
+marks in the window and the latest mark is positive, **disproven** when the
+latest mark is negative, and **unproven** otherwise. With
+`negativeOverrides: false` it is proven when positives outnumber negatives
+instead. A required competency that is unproven or disproven is a **gap**.
+
+## A typical week
+
+1. Write your notes as usual in `notes/<year>-W<week>.md`, adding a `+`, `-`
+   or `~` token wherever something shows a competency (see below).
+2. `mgmt lint` to catch typos (it suggests the closest token or name) and to
+   see what needs attention: overdue actions, unaddressed negatives, people
+   you haven't had a 1:1 with.
+3. Before a 1:1: `mgmt prep <person>` for open actions, what happened since
+   last time, gaps and a suggested focus.
+4. At review time: `mgmt review <person> --out <person>-review.md` for the
+   evidence pack, and `mgmt status` for the team picture. `mgmt explain
+   <person> <competency>` shows exactly which notes decided a status.
 
 ## Commands
 
@@ -70,6 +199,9 @@ Person and date are inherited from context, so a mark is a single token.
   addresses. `@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names
   (`@fri`).
 - `!name` records a ReviewCycle input as received.
+- A token must start a word (after a space, `(` or the line start), so
+  `+1`, `-5` and hyphenated words are never tokens, and nothing inside code
+  spans, code blocks or links counts.
 
 ## Errors and warnings
 
