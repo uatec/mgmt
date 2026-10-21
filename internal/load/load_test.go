@@ -2,10 +2,14 @@ package load
 
 import (
 	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/bmatcuk/doublestar/v4"
 	"github.com/uatec/mgmt/internal/facts"
 )
 
@@ -159,5 +163,95 @@ func TestSplitDocsSeparatorVariants(t *testing.T) {
 	}
 	if strings.Join(got, ",") != "a@1,b@5,c@9,d@13" {
 		t.Errorf("docs = %v, want a@1,b@5,c@9,d@13", got)
+	}
+}
+
+func writeNote(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func notePaths(notes []NoteFile) []string {
+	p := []string{}
+	for _, n := range notes {
+		p = append(p, n.Path)
+	}
+	return p
+}
+
+func TestLoadNotesAbsoluteOutsideRoot(t *testing.T) {
+	tmp := t.TempDir()
+	root := filepath.Join(tmp, "ws")
+	vault := filepath.Join(tmp, "vault", "Journal")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeNote(t, filepath.Join(vault, "2026-10-21.md"), "b")
+	writeNote(t, filepath.Join(vault, "2026-10-20.md"), "a")
+	writeNote(t, filepath.Join(vault, "sub", "2026-W42.md"), "c")
+	writeNote(t, filepath.Join(vault, "skip.txt"), "x")
+	if err := os.MkdirAll(filepath.Join(vault, "dir.md"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	notes, err := LoadNotes(root, filepath.ToSlash(vault)+"/**/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	v := filepath.ToSlash(vault)
+	want := []string{v + "/2026-10-20.md", v + "/2026-10-21.md", v + "/sub/2026-W42.md"}
+	if strings.Join(notePaths(notes), ",") != strings.Join(want, ",") {
+		t.Errorf("paths = %v, want %v", notePaths(notes), want)
+	}
+	if string(notes[0].Source) != "a" {
+		t.Errorf("source = %q", notes[0].Source)
+	}
+	none, err := LoadNotes(root, v+"/nothing/**/*.md")
+	if err != nil || none == nil || len(none) != 0 {
+		t.Errorf("no-match = %#v, %v", none, err)
+	}
+	if _, err := LoadNotes(root, v+"/[.md"); !errors.Is(err, doublestar.ErrBadPattern) {
+		t.Errorf("bad pattern err = %v", err)
+	}
+}
+
+func TestLoadNotesAbsoluteInsideRootIsRelative(t *testing.T) {
+	root := t.TempDir()
+	writeNote(t, filepath.Join(root, "notes", "2026-W43.md"), "x")
+	notes, err := LoadNotes(root, filepath.ToSlash(root)+"/notes/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := notePaths(notes); len(got) != 1 || got[0] != "notes/2026-W43.md" {
+		t.Errorf("paths = %v", got)
+	}
+}
+
+func TestLoadNotesHomeGlob(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("USERPROFILE", home)
+	writeNote(t, filepath.Join(home, "Obsidian", "Vault", "Journal", "2026-10-21.md"), "j")
+	root := t.TempDir()
+	notes, err := LoadNotes(root, "~/Obsidian/Vault/Journal/**/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.ToSlash(home) + "/Obsidian/Vault/Journal/2026-10-21.md"
+	if got := notePaths(notes); len(got) != 1 || got[0] != want {
+		t.Errorf("paths = %v, want [%s]", got, want)
+	}
+}
+
+func TestLoadNotesHomeUnresolvable(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	_, err := LoadNotes(t.TempDir(), "~/x/*.md")
+	if err == nil || !strings.Contains(err.Error(), "home") {
+		t.Errorf("err = %v", err)
 	}
 }

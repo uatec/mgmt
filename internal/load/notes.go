@@ -1,41 +1,78 @@
 package load
 
 import (
+	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 )
 
-// NoteFile is a notes file read from the workspace.
+// NoteFile is a notes file read from disk.
 type NoteFile struct {
-	Path   string // relative to the workspace root, slash-separated
+	// Path is slash-separated: relative to the workspace root for files under
+	// it, otherwise the absolute, cleaned path (so file:line stays clickable).
+	Path   string
 	Source []byte
 }
 
-// LoadNotes reads every file under root matching the doublestar glob, sorted by Path.
-// A glob that matches nothing yields an empty slice and no error.
+// LoadNotes reads every file matching the doublestar glob, sorted by Path.
+// The glob is relative to root, absolute, or starts with "~/" (the user's
+// home directory). A glob that matches nothing yields an empty slice and no
+// error; a malformed glob returns doublestar.ErrBadPattern.
 func LoadNotes(root, glob string) ([]NoteFile, error) {
-	matches, err := doublestar.Glob(os.DirFS(root), glob)
+	if glob == "~" || strings.HasPrefix(glob, "~/") {
+		home, err := os.UserHomeDir()
+		if err != nil || home == "" {
+			return nil, fmt.Errorf("spec.notes %q: cannot resolve the home directory (is $HOME set?)", glob)
+		}
+		glob = filepath.ToSlash(home) + glob[1:]
+	}
+	base, pattern, rooted := root, glob, false
+	if strings.HasPrefix(glob, "/") || filepath.IsAbs(glob) {
+		base, pattern = doublestar.SplitPattern(filepath.ToSlash(glob))
+		rooted = true
+	}
+	matches, err := doublestar.Glob(os.DirFS(base), pattern)
 	if err != nil {
 		return nil, err
 	}
-	sort.Strings(matches)
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
 	notes := []NoteFile{}
 	for _, m := range matches {
-		info, err := os.Stat(filepath.Join(root, filepath.FromSlash(m)))
+		full := filepath.Join(base, filepath.FromSlash(m))
+		info, err := os.Stat(full)
 		if err != nil {
 			return nil, err
 		}
 		if info.IsDir() {
 			continue
 		}
-		b, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(m)))
+		b, err := os.ReadFile(full)
 		if err != nil {
 			return nil, err
 		}
-		notes = append(notes, NoteFile{Path: m, Source: b})
+		p := m
+		if rooted {
+			p = noteDisplayPath(absRoot, full)
+		}
+		notes = append(notes, NoteFile{Path: p, Source: b})
 	}
+	sort.Slice(notes, func(i, j int) bool { return notes[i].Path < notes[j].Path })
 	return notes, nil
+}
+
+// noteDisplayPath is full relative to absRoot when it lies under it,
+// otherwise the cleaned absolute path, always slash-separated.
+func noteDisplayPath(absRoot, full string) string {
+	if rel, err := filepath.Rel(absRoot, full); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.ToSlash(rel)
+	}
+	return path.Clean(filepath.ToSlash(full))
 }
