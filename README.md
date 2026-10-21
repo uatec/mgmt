@@ -65,11 +65,22 @@ apiVersion: mgmt/v1alpha1
 kind: Workspace
 metadata: {name: default}
 spec:
-  notes: notes/**/*.md          # glob, relative to the workspace root
+  notes: notes/**/*.md          # glob: relative to the workspace root, absolute, or ~/...
   me: [me]                      # tokens meaning you in actions (@me)
   defaultWindow: 90d            # evidence window when no review cycle applies
   oneToOneCadence: 14d          # how often you expect a 1:1
 ```
+
+`spec.notes` can point outside the workspace, so you can read an existing
+journal in place, for example an Obsidian vault:
+
+```yaml
+  notes: ~/Obsidian/MyVault/Journal/**/*.md
+```
+
+Globs starting with `~/` expand to your home directory, and absolute globs
+(`/home/me/Vault/Journal/**/*.md`) work too. Files outside the workspace show
+up in `file:line` references with their absolute path. mgmt only reads them.
 
 **CompetencyFramework**: the competencies, the short tokens you write in notes,
 and what each role expects at each level. A level inherits its lower level's
@@ -188,8 +199,11 @@ Person and date are inherited from context, so a mark is a single token.
 - @priya +crossteam unblocked the handover
 ```
 
-- The file name (`YYYY-Www.md` or `YYYY-MM-DD*.md`) or the H1 dates the file.
+- The file name (`YYYY-Www.md`, `YYYY-MM-DD.md` or `YYYY-MM-DD anything.md`,
+  as Obsidian daily and weekly notes are named) or the H1 dates the file.
   A heading can carry its own date (`## Sam 2026-10-22`, `## Sam (Wed 22 Oct)`).
+- YAML front matter (a leading `---` block closed by `---` or `...`) is ignored.
+  Obsidian links work in headings: `## 1:1 [[Sam]]` sets Sam.
 - A heading that names a Person (by name or alias) sets the person for the lines
   under it. `@person` on a line attributes that line to someone else.
 - `+x` is positive evidence, `-x` negative evidence and `~x` a neutral "discussed"

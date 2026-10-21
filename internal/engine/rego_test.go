@@ -230,3 +230,61 @@ func TestLoadModulesStatError(t *testing.T) {
 		t.Fatalf("policy is a file: err = %v", err)
 	}
 }
+
+// TestRunNotesOutsideWorkspace: notes in a sibling directory (an Obsidian
+// vault) are read in place, with absolute file:line references, front matter
+// ignored, and nothing written to the vault.
+func TestRunNotesOutsideWorkspace(t *testing.T) {
+	tmp := t.TempDir()
+	ws := filepath.Join(tmp, "ws")
+	vault := filepath.Join(tmp, "vault", "Journal")
+	if err := os.MkdirAll(vault, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cp := func(rel string) {
+		b, err := os.ReadFile(filepath.Join("../../testdata/spec-example", rel))
+		if err != nil {
+			t.Fatal(err)
+		}
+		dst := filepath.Join(ws, rel)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dst, b, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, f := range []string{"resources/framework.yaml", "resources/people.yaml"} {
+		cp(f)
+	}
+	glob := filepath.ToSlash(vault) + "/**/*.md"
+	wsYAML := "apiVersion: mgmt/v1alpha1\nkind: Workspace\nmetadata: {name: default}\nspec:\n  notes: " + glob + "\n  me: [me]\n"
+	if err := os.WriteFile(filepath.Join(ws, "resources", "workspace.yaml"), []byte(wsYAML), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	note := filepath.Join(vault, "2026-10-21.md")
+	body := "---\ntags: [journal]\n---\n## 1:1 [[Sam]]\n- +ownership led the review\n"
+	if err := os.WriteFile(note, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	res, err := Run(ws, Options{Now: "2026-10-21"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Errors) != 0 {
+		t.Fatalf("errors = %+v", res.Errors)
+	}
+	if len(res.Facts.Evidence) != 1 {
+		t.Fatalf("evidence = %+v", res.Facts.Evidence)
+	}
+	ev := res.Facts.Evidence[0]
+	if ev.File != filepath.ToSlash(note) || ev.Line != 5 || ev.Person != "sam" {
+		t.Errorf("evidence = %+v, want file %s line 5", ev, filepath.ToSlash(note))
+	}
+	after, _ := os.ReadFile(note)
+	entries, _ := os.ReadDir(vault)
+	if string(after) != body || len(entries) != 1 {
+		t.Errorf("vault was modified: %d entries", len(entries))
+	}
+}
