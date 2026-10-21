@@ -159,10 +159,10 @@ and `mgmt review sam --out sam.md`.
 | Command | Purpose |
 | --- | --- |
 | `mgmt init` | scaffold a workspace with example resources, notes and policies; refuses to overwrite |
-| `mgmt lint [--strict] [--format text\|json]` | print errors and warnings; exit 2 on errors, 1 on warnings with `--strict`, else 0 |
+| `mgmt lint [--strict] [--format text\|flat\|json]` | print errors and warnings; exit 2 on errors, 1 on warnings with `--strict`, else 0. `text` (default) is markdown: errors grouped by id first, then each person's warnings grouped by id, each with its `file:line`; `flat` is one `file:line: severity id [person]: message` line per finding, for editors and grep |
 | `mgmt prep <person> [--cycle <name>]` | 1:1 prep sheet |
 | `mgmt review <person> [--cycle <name>]` | review evidence pack |
-| `mgmt status [--cycle <name>]` | team overview and cycle conditions |
+| `mgmt status [--cycle <name>] [--format markdown\|yaml]` | team matrix, then per active cycle the next milestone and three checks (evidence gaps, missing inputs, overdue actions) listing who and what; `yaml` prints the checks as Kubernetes-style `status.conditions` for scripts |
 | `mgmt explain <person> <competency> [--cycle <name>]` | why a competency has its status |
 | `mgmt report <name> [<person>]` | run a workspace report template (`reports/<name>.tmpl`) |
 | `mgmt facts` | print the facts document as JSON |
@@ -248,7 +248,7 @@ No rebuild needed for any of these.
 
 - **Policies:** every `.rego` under `policy/` loads alongside the core policies. Packages are `mgmt.policy.<name>`, may read `data.mgmt.derive`, and emit `deny` and `warn` sets of `{id, person, file, line, message}`. `mgmt init` writes a commented example, `policy/example/example.rego`.
 - **Kinds:** a CUE definition under `schema/` registers a new `kind`; its resources appear in facts under `resources.<Kind>`.
-- **Reports:** a template in `reports/` named like a core report (`prep`, `review`, `explain`, `status`) replaces it; any other `reports/<name>.tmpl` runs with `mgmt report <name> [<person>]`.
+- **Reports:** a template in `reports/` named like a core report (`prep`, `review`, `explain`, `status`, and `status-yaml` for `status --format yaml`) replaces it; any other `reports/<name>.tmpl` runs with `mgmt report <name> [<person>]`.
 - **Thresholds:** override warning thresholds in `Workspace.spec.policy.<id>` (see [Errors and warnings](#errors-and-warnings)).
 
 Escape hatch (best effort): policies follow Conftest conventions, so
