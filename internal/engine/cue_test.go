@@ -46,6 +46,17 @@ func TestValidateSpecExamples(t *testing.T) {
 	}
 }
 
+const (
+	oneComp = "    - {id: a.x, title: X}\n"
+	dupComp = oneComp + oneComp
+	roleL1  = "    - name: r\n      levels:\n        - name: L1\n"
+)
+
+// framework is a CompetencyFramework document with the given competency and role list items.
+func framework(comps, roles string) string {
+	return "apiVersion: mgmt/v1alpha1\nkind: CompetencyFramework\nmetadata:\n  name: eng\nspec:\n  competencies:\n" + comps + "  roles:\n" + roles
+}
+
 func TestValidateSchemaInvalid(t *testing.T) {
 	person := func(extra string) string {
 		return "apiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: sam\nspec:\n  framework: eng\n  role: r\n  level: L2\n  since: 2026-05-01\n" + extra
@@ -58,15 +69,19 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		files map[string]string // relative to resources/
 		file  string
 		line  int
+		msg   string // substring of the message; "" checks only that it's set
 	}{
-		{"bad date", map[string]string{"b.yaml": strings.Replace(person(""), "2026-05-01", "2026-5-1", 1)}, "resources/b.yaml", 1},
-		{"unknown field", map[string]string{"b.yaml": person("  colour: red\n")}, "resources/b.yaml", 1},
-		{"wrong apiVersion", map[string]string{"b.yaml": strings.Replace(person(""), "mgmt/v1alpha1", "mgmt/v2", 1)}, "resources/b.yaml", 1},
-		{"min zero", map[string]string{"b.yaml": cycle("0")}, "resources/b.yaml", 1},
-		{"empty selector", map[string]string{"b.yaml": strings.Replace(cycle("1"), "{people: [sam]}", "{}", 1)}, "resources/b.yaml", 1},
-		{"unknown kind", map[string]string{"b.yaml": "apiVersion: mgmt/v1alpha1\nkind: Team\nmetadata:\n  name: t\nspec: {}\n"}, "resources/b.yaml", 1},
-		{"second doc line", map[string]string{"b.yaml": person("") + "---\n" + strings.Replace(person(""), "sam", "BAD NAME", 1)}, "resources/b.yaml", 11},
-		{"two workspaces", map[string]string{"b.yaml": wsYAML}, "resources/b.yaml", 1},
+		{"bad date", map[string]string{"b.yaml": strings.Replace(person(""), "2026-05-01", "2026-5-1", 1)}, "resources/b.yaml", 1, ""},
+		{"unknown field", map[string]string{"b.yaml": person("  colour: red\n")}, "resources/b.yaml", 1, ""},
+		{"wrong apiVersion", map[string]string{"b.yaml": strings.Replace(person(""), "mgmt/v1alpha1", "mgmt/v2", 1)}, "resources/b.yaml", 1, ""},
+		{"min zero", map[string]string{"b.yaml": cycle("0")}, "resources/b.yaml", 1, ""},
+		{"empty selector", map[string]string{"b.yaml": strings.Replace(cycle("1"), "{people: [sam]}", "{}", 1)}, "resources/b.yaml", 1, ""},
+		{"unknown kind", map[string]string{"b.yaml": "apiVersion: mgmt/v1alpha1\nkind: Team\nmetadata:\n  name: t\nspec: {}\n"}, "resources/b.yaml", 1, ""},
+		{"second doc line", map[string]string{"b.yaml": person("") + "---\n" + strings.Replace(person(""), "sam", "BAD NAME", 1)}, "resources/b.yaml", 11, ""},
+		{"two workspaces", map[string]string{"b.yaml": wsYAML}, "resources/b.yaml", 1, ""},
+		{"duplicate competency id", map[string]string{"b.yaml": framework(dupComp, roleL1)}, "resources/b.yaml", 1, `duplicate competency id "a.x"`},
+		{"duplicate role name", map[string]string{"b.yaml": framework(oneComp, roleL1+roleL1)}, "resources/b.yaml", 1, `duplicate role name "r"`},
+		{"duplicate level name", map[string]string{"b.yaml": framework(oneComp, "    - name: r\n      levels:\n        - name: L1\n        - name: L1\n")}, "resources/b.yaml", 1, `role "r": duplicate level name "L1"`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -89,11 +104,25 @@ func TestValidateSchemaInvalid(t *testing.T) {
 				t.Fatalf("want 1 finding, got %+v", fs)
 			}
 			f := fs[0]
-			if f.ID != "schema-invalid" || f.Severity != "error" || f.File != tc.file || f.Line != tc.line || f.Message == "" {
+			if f.ID != "schema-invalid" || f.Severity != "error" || f.File != tc.file || f.Line != tc.line || f.Message == "" || !strings.Contains(f.Message, tc.msg) {
 				t.Errorf("got %+v, want file %s line %d", f, tc.file, tc.line)
 			}
 		})
 	}
+	t.Run("unique framework is valid", func(t *testing.T) {
+		root := t.TempDir()
+		if err := os.MkdirAll(filepath.Join(root, "resources"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		body := wsYAML + "---\n" + framework(oneComp+"    - {id: a.y, title: Why}\n", roleL1+"    - name: s\n      levels:\n        - name: L1\n")
+		if err := os.WriteFile(filepath.Join(root, "resources", "a.yaml"), []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		res, _ := load.LoadResources(root)
+		if fs := Validate(res, mgmt.CoreSchema, filepath.Join(root, "schema")); len(fs) != 0 {
+			t.Fatalf("got %+v", fs)
+		}
+	})
 	t.Run("zero workspaces", func(t *testing.T) {
 		fs := Validate(nil, mgmt.CoreSchema, filepath.Join(t.TempDir(), "schema"))
 		if len(fs) != 1 || fs[0].ID != "schema-invalid" || !strings.Contains(fs[0].Message, "Workspace") {

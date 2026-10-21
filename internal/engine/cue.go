@@ -166,6 +166,12 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 		v := def.Unify(ctx.Encode(intify(r.Object)))
 		if err := v.Validate(cue.Concrete(true)); err != nil {
 			finds = append(finds, invalid(r.File, r.Line, strings.TrimPrefix(firstLine(err.Error()), "#"+r.Kind+".")))
+			continue
+		}
+		if r.Kind == "CompetencyFramework" {
+			for _, msg := range frameworkDuplicates(r.Object) {
+				finds = append(finds, invalid(r.File, r.Line, msg))
+			}
 		}
 	}
 	if seenWS == 0 {
@@ -211,4 +217,37 @@ func selectorProblem(obj map[string]any) string {
 		return "spec.selector: needs at least one of people and matchRoles"
 	}
 	return ""
+}
+
+// frameworkDuplicates enforces unique competency ids and role names per
+// framework and unique level names per role, which CUE lists cannot express.
+// Call it only on a CUE-valid framework.
+func frameworkDuplicates(obj map[string]any) []string {
+	spec, _ := obj["spec"].(map[string]any)
+	var msgs []string
+	msgs = append(msgs, uniqueNames(spec["competencies"], "id", "spec.competencies: duplicate competency id %q")...)
+	msgs = append(msgs, uniqueNames(spec["roles"], "name", "spec.roles: duplicate role name %q")...)
+	roles, _ := spec["roles"].([]any)
+	for _, r := range roles {
+		role, _ := r.(map[string]any)
+		name, _ := role["name"].(string)
+		msgs = append(msgs, uniqueNames(role["levels"], "name", fmt.Sprintf("spec.roles: role %q: duplicate level name %%q", name))...)
+	}
+	return msgs
+}
+
+// uniqueNames reports each repeated item[key] in a list once per repeat, using format.
+func uniqueNames(items any, key, format string) []string {
+	var msgs []string
+	seen := map[string]bool{}
+	list, _ := items.([]any)
+	for _, it := range list {
+		m, _ := it.(map[string]any)
+		v, _ := m[key].(string)
+		if seen[v] {
+			msgs = append(msgs, fmt.Sprintf(format, v))
+		}
+		seen[v] = true
+	}
+	return msgs
 }

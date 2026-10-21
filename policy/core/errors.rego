@@ -78,6 +78,17 @@ deny contains f if {
 	f := _at("CompetencyFramework", name, "ref-unknown", "", sprintf("role %q: level %q inherits unknown level %q", [r.name, l.name, l.inherits]))
 }
 
+deny contains f if {
+	some name, fw in _frameworks
+	ids := {c.id | some c in object.get(fw, ["spec", "competencies"], [])}
+	some r in _roles(fw)
+	some l in _levels(r)
+	some field in ["expects", "removes"]
+	some id in object.get(l, field, [])
+	not id in ids
+	f := _at("CompetencyFramework", name, "ref-unknown", "", sprintf("role %q: level %q %s unknown competency %q", [r.name, l.name, field, id]))
+}
+
 # _looping(r) is the set of levels in role r that reach themselves via inherits.
 _looping(r) := {l.name |
 	g := {x.name: {x.inherits | x.inherits} | some x in _levels(r)}

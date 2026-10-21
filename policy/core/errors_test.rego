@@ -260,3 +260,32 @@ test_lib_min_max_date if {
 test_lib_finding if {
 	lib.finding("x", "sam", "f.md", 3, "m") == {"id": "x", "person": "sam", "file": "f.md", "line": 3, "message": "m", "msg": "m"}
 }
+
+# --- ref-unknown: level expects/removes -----------------------------------
+
+test_ref_unknown_level_expects if {
+	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "expects": ["collab.nope"]})
+	fs := core.deny with input as doc({"eng": fw}, {}, {})
+	some f in fs
+	f.id == "ref-unknown"
+	f.person == ""
+	f.file == "resources/framework.yaml"
+	f.line == 1
+	contains(f.message, `level "L3" expects unknown competency "collab.nope"`)
+	contains(f.message, `role "platform-engineer"`)
+	count(fs) == 1
+}
+
+test_ref_unknown_level_removes if {
+	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "removes": ["delivery.nope"]})
+	fs := core.deny with input as doc({"eng": fw}, {}, {})
+	some f in fs
+	f.id == "ref-unknown"
+	contains(f.message, `level "L3" removes unknown competency "delivery.nope"`)
+	count(fs) == 1
+}
+
+test_known_level_expects_and_removes_do_not_fire if {
+	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "expects": ["collab.planning"], "removes": ["delivery.ownership"]})
+	count(core.deny) == 0 with input as doc({"eng": fw}, {}, {})
+}

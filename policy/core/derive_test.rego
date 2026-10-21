@@ -376,3 +376,22 @@ test_empty_input_is_total if {
 	derive.active_cycles == [] with input as {}
 	count(derive.window) == 0 with input as {}
 }
+
+# A person whose framework is missing keeps a window, settings and cycle, but
+# every framework-dependent rule is undefined for them (ref-unknown reports it).
+test_missing_framework_person if {
+	lost := object.union(sam, {"spec": {"framework": "nope"}})
+	d := doc(framework, {"sam": lost}, {"ensek-2026-h2": h2})
+	derive.window.sam.cycle == "ensek-2026-h2" with input as d
+	derive.settings.sam.minPerCompetency == 1 with input as d
+	derive.cycle.sam == "ensek-2026-h2" with input as d
+	not derive.competencies.sam with input as d
+	not derive.required.sam with input as d
+	not derive.marks.sam with input as d
+	not derive.outside.sam with input as d
+	not derive.status.sam with input as d
+	not derive.gaps.sam with input as d
+	not derive.last_touch.sam with input as d
+	not derive.addressed_by.sam with input as d
+	count(derive.inputs["ensek-2026-h2"].sam) == 3 with input as d
+}
