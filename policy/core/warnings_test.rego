@@ -174,6 +174,31 @@ test_negative_bad_threshold_uses_default if {
 	count(fired(with_policy(d, {"negative-unaddressed": {"graceDays": "soon"}}), "negative-unaddressed")) == 0
 }
 
+test_negative_after_cycle_period_while_cycle_active if {
+	# h2's period ended 2026-09-30 but its milestones run to 2026-11-28:
+	# a recent negative still needs addressing (Ruling R11)
+	d := with_cycle(old_negative)
+	fs := fired(d, "negative-unaddressed")
+	count(fs) == 1
+	some f in fs
+	f.line == 4
+}
+
+test_negative_before_since_ignored if {
+	d := planning_evidence(quiet, [ev("collab.planning", -1, "2026-04-20", 4)])
+	count(fired(d, "negative-unaddressed")) == 0
+}
+
+test_negative_after_now_ignored if {
+	d := planning_evidence(quiet, [ev("collab.planning", -1, "2026-12-01", 4)])
+	count(fired(d, "negative-unaddressed")) == 0
+}
+
+test_negative_exactly_grace_days_old if {
+	d := planning_evidence(quiet, [ev("collab.planning", -1, "2026-10-14", 4)])
+	count(fired(d, "negative-unaddressed")) == 0
+}
+
 # --- gap-unaddressed ------------------------------------------------------
 
 gap := planning_evidence(quiet, [])
@@ -237,6 +262,18 @@ test_untouched_days_override if {
 	count(fired(with_policy(d, {"competency-untouched": {"days": 30}}), "competency-untouched")) == 1
 }
 
+test_untouched_last_touch_exactly_limit_ago if {
+	# 2026-09-09 is exactly 42 days before now: still inside the window
+	d := planning_evidence(quiet, [ev("collab.planning", 1, "2026-09-09", 3)])
+	count(fired(d, "competency-untouched")) == 0
+}
+
+test_untouched_since_exactly_limit_ago if {
+	# managed for exactly 42 days: the threshold is reached (Decision M)
+	d := with_sam(gap, {"since": "2026-09-09"})
+	count(fired(d, "competency-untouched")) == 1
+}
+
 # --- action-overdue and action-no-due -------------------------------------
 
 test_action_overdue if {
@@ -285,6 +322,15 @@ test_action_duplicate_needs_two_open if {
 	count(fired(d, "action-duplicate")) == 0
 }
 
+test_action_duplicate_per_person if {
+	# same text for two people is two separate actions (Ruling R12)
+	d := patched(quiet, {"actions": [
+		act("book 1:1 room", "2026-10-14", "2026-10-30", false, [], 5),
+		object.union(act("book 1:1 room", "2026-10-14", "2026-10-30", false, [], 6), {"person": "priya"}),
+	]})
+	count(fired(d, "action-duplicate")) == 0
+}
+
 # --- oneonone-overdue -----------------------------------------------------
 
 test_oneonone_quiet if {
@@ -319,6 +365,10 @@ test_oneonone_no_sections_since_old if {
 test_oneonone_no_sections_since_recent if {
 	d := with_sam(patched(quiet, {"sections": []}), {"since": "2026-10-10"})
 	count(fired(d, "oneonone-overdue")) == 0
+}
+
+test_oneonone_exactly_one_cadence_ago if {
+	count(fired(patched(quiet, {"sections": [section("2026-10-07", 2, 1)]}), "oneonone-overdue")) == 0
 }
 
 # --- cycle-input-missing --------------------------------------------------
@@ -382,4 +432,14 @@ test_cycle_evidence_thin_no_gaps if {
 test_threshold_accepts_duration if {
 	d := planning_evidence(quiet, [ev("collab.planning", 1, "2026-09-15", 3)])
 	count(fired(with_policy(d, {"competency-untouched": {"days": "4w"}}), "competency-untouched")) == 1
+}
+
+test_cycle_input_milestone_exactly_days_before if {
+	# peer-nominations is due 2026-10-27, exactly 7 days after 2026-10-20
+	count(fired(patched(with_cycle(quiet), {"now": "2026-10-20"}), "cycle-input-missing")) == 1
+}
+
+test_cycle_evidence_thin_draft_exactly_days_before if {
+	# manager-draft is due 2026-11-14, exactly 14 days after 2026-10-31
+	count(fired(patched(with_cycle(quiet), {"now": "2026-10-31"}), "cycle-evidence-thin")) == 1
 }

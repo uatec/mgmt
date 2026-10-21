@@ -53,12 +53,17 @@ _addresses_since(p, c, date) if {
 	a.date >= date
 }
 
+# Not windowed to the cycle period: a negative mark stays the manager's
+# concern from the person's since date up to now (Ruling R11).
 warn contains f if {
 	grace := _param("negative-unaddressed", "graceDays", 7)
-	some p, comps in derive.marks
-	some c, ms in comps
-	some m in ms
+	some m in object.get(input, "evidence", [])
 	m.polarity < 0
+	p := m.person
+	c := m.competency
+	derive.competencies[p][c]
+	object.get(_persons[p], ["spec", "since"], "") <= m.date
+	m.date <= _now
 	_now > lib.add_days(m.date, grace)
 	not _addresses_since(p, c, m.date)
 	f := lib.finding("negative-unaddressed", p, m.file, m.line, sprintf("negative %s mark for %s on %s has no ~%s action dated on or after it", [c, p, m.date, c]))
@@ -113,7 +118,9 @@ warn contains f if {
 	f := lib.finding("action-no-due", a.person, a.file, a.line, sprintf("action %q has no due date", [a.text]))
 }
 
-_action_key(a) := regex.replace(lower(trim_space(a.text)), `\s+`, " ")
+# Duplicates are per person (Ruling R12): the same text for two people is
+# two separate actions.
+_action_key(a) := [a.person, regex.replace(lower(trim_space(a.text)), `\s+`, " ")]
 
 warn contains f if {
 	some a in _actions
