@@ -145,6 +145,7 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 	defs := kindDefs(schema)
 	var finds []facts.Finding
 	seenWS := 0
+	seenName := map[string]bool{}
 	for _, r := range resources {
 		if r.Kind == "Workspace" {
 			seenWS++
@@ -168,6 +169,13 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 			finds = append(finds, invalid(r.File, r.Line, strings.TrimPrefix(firstLine(err.Error()), "#"+r.Kind+".")))
 			continue
 		}
+		// Workspaces are already limited to one above.
+		key := r.Kind + "/" + r.Name
+		if r.Kind != "Workspace" && seenName[key] {
+			finds = append(finds, invalid(r.File, r.Line, fmt.Sprintf("duplicate %s %q: metadata.name must be unique per kind", r.Kind, r.Name)))
+			continue
+		}
+		seenName[key] = true
 		if r.Kind == "CompetencyFramework" {
 			for _, msg := range frameworkDuplicates(r.Object) {
 				finds = append(finds, invalid(r.File, r.Line, msg))

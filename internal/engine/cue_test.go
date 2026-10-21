@@ -81,6 +81,7 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		{"two workspaces", map[string]string{"b.yaml": wsYAML}, "resources/b.yaml", 1, ""},
 		{"duplicate competency id", map[string]string{"b.yaml": framework(dupComp, roleL1)}, "resources/b.yaml", 1, `duplicate competency id "a.x"`},
 		{"duplicate role name", map[string]string{"b.yaml": framework(oneComp, roleL1+roleL1)}, "resources/b.yaml", 1, `duplicate role name "r"`},
+		{"duplicate resource name", map[string]string{"b.yaml": person("") + "---\n" + person("")}, "resources/b.yaml", 11, `duplicate Person "sam"`},
 		{"duplicate level name", map[string]string{"b.yaml": framework(oneComp, "    - name: r\n      levels:\n        - name: L1\n        - name: L1\n")}, "resources/b.yaml", 1, `role "r": duplicate level name "L1"`},
 	}
 	for _, tc := range tests {
