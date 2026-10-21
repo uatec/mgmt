@@ -61,13 +61,14 @@ type extractor struct {
 	lineStarts []int
 	fileDate   time.Time
 	stack      []frame
+	first      int // index of this file's first diagnostic
 }
 
 func newExtractor(f load.NoteFile, idx *Index, out *facts.Facts) *extractor {
 	src := bytes.TrimPrefix(f.Source, []byte("\xef\xbb\xbf"))
 	src = bytes.ReplaceAll(src, []byte("\r\n"), []byte("\n"))
 	src = bytes.ReplaceAll(src, []byte("\r"), []byte("\n"))
-	x := &extractor{idx: idx, out: out, file: f.Path, src: src, lineStarts: []int{0}}
+	x := &extractor{idx: idx, out: out, file: f.Path, src: src, lineStarts: []int{0}, first: len(out.Diagnostics)}
 	for i, c := range src {
 		if c == '\n' {
 			x.lineStarts = append(x.lineStarts, i+1)
@@ -77,10 +78,14 @@ func newExtractor(f load.NoteFile, idx *Index, out *facts.Facts) *extractor {
 	return x
 }
 
-// diag records an extraction error. Task 6 calls it at the points marked below.
+// diag records an extraction error.
 func (x *extractor) diag(code string, line int, msg string) {
+	x.diagSuggest(code, line, msg, "")
+}
+
+func (x *extractor) diagSuggest(code string, line int, msg, suggest string) {
 	x.out.Diagnostics = append(x.out.Diagnostics, facts.Diagnostic{
-		Severity: "error", Code: code, File: x.file, Line: line, Message: msg,
+		Severity: "error", Code: code, File: x.file, Line: line, Message: msg, Suggest: suggest,
 	})
 }
 
@@ -91,6 +96,8 @@ func (x *extractor) lineOf(off int) int {
 func (x *extractor) run() {
 	doc := markdown.Parser().Parse(text.NewReader(x.src))
 	x.mask(doc)
+	x.h1Date(doc)
+	defer x.finish()
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
 		if !entering {
 			return ast.WalkContinue, nil
@@ -107,6 +114,32 @@ func (x *extractor) run() {
 		}
 		return ast.WalkContinue, nil
 	})
+}
+
+// h1Date lets the first dated H1 date the whole file, including lines that
+// come before it (Ruling R2).
+func (x *extractor) h1Date(doc ast.Node) {
+	ref := x.fileDate
+	for c := doc.FirstChild(); c != nil; c = c.NextSibling() {
+		h, ok := c.(*ast.Heading)
+		if !ok || h.Level != 1 {
+			continue
+		}
+		if d, ok := HeadingDate(plainText(h, x.src), ref); ok && (!ref.IsZero() || d.Year() >= 1000) {
+			x.fileDate = d
+			return
+		}
+	}
+}
+
+// finish reports a file with content but no resolvable date, then orders the
+// file's diagnostics by line.
+func (x *extractor) finish() {
+	if x.fileDate.IsZero() && len(bytes.TrimSpace(x.src)) > 0 {
+		x.diag("date-unresolved", 1, "no date in the file name or its first-level heading")
+	}
+	mine := x.out.Diagnostics[x.first:]
+	sort.SliceStable(mine, func(i, j int) bool { return mine[i].Line < mine[j].Line })
 }
 
 // maskByte replaces masked source bytes. It is neither whitespace nor '(',
@@ -250,11 +283,13 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 	}
 	entry, ok := x.date()
 	if !ok {
-		return // Task 6: date-unresolved (Ruling R2) is reported per file
+		return // finish reports date-unresolved once per file (Ruling R2)
 	}
+	lineNo := x.lineOf(start)
 
 	person := ""
 	due := ""
+	unknown := false
 	for _, t := range toks {
 		if t.Sigil != '@' {
 			continue
@@ -267,7 +302,8 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 		}
 		if p, ok := x.idx.Person(t.Body); ok {
 			if person != "" && person != p {
-				return // Task 6: line-multi-person
+				x.diag("line-multi-person", lineNo, fmt.Sprintf("line names two people: %q and %q", person, p))
+				return
 			}
 			person = p
 			continue
@@ -275,7 +311,18 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 		if isAction && x.idx.IsMe(t.Body) {
 			continue
 		}
-		// Task 6: person-unknown
+		x.diagSuggest("person-unknown", lineNo, fmt.Sprintf("unknown person %q", t.Body),
+			Suggest(t.Body, x.idx.PersonNames()))
+		unknown = true
+	}
+	if unknown {
+		return
+	}
+	marks := []string{}
+	for _, t := range toks {
+		if t.Sigil != '@' {
+			marks = append(marks, string(t.Sigil)+t.Body)
+		}
 	}
 	attributed := person != ""
 	if person == "" && len(x.stack) > 0 {
@@ -284,14 +331,21 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			person = ps[0]
 		case 0:
 		default:
-			// Task 6: heading-multi-person (when the line is marked)
+			if len(marks) > 0 {
+				x.diag("heading-multi-person", lineNo, fmt.Sprintf(
+					"heading names several people (%s); put @person on the line to say whose %s is",
+					strings.Join(ps, ", "), marks[0]))
+			}
+			return
 		}
 	}
 	if person == "" {
-		return // Decision H for actions; Task 6: person-missing for marks
+		if len(marks) > 0 { // Decision H: a checkbox with no marks is ignored
+			x.diag("person-missing", lineNo, fmt.Sprintf("%s has no person: no @person on the line and no person heading above it", marks[0]))
+		}
+		return
 	}
 
-	lineNo := x.lineOf(start)
 	txt := recordText(string(x.src[start:end]), toks)
 	date := fmtDate(entry)
 
@@ -304,11 +358,13 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 		for _, t := range toks {
 			switch t.Sigil {
 			case '~':
-				if id, ok := x.competency(person, t.Body); ok && !contains(addresses, id) {
+				if id, ok := x.competency(person, t.Body, lineNo); ok && !contains(addresses, id) {
 					addresses = append(addresses, id)
 				}
 			case '+', '-':
-				// Task 6: evidence-in-action
+				x.diag("evidence-in-action", lineNo, fmt.Sprintf(
+					"evidence token %q on an action; evidence belongs on its own line (use ~ to say what the action addresses)",
+					string(t.Sigil)+t.Body))
 			}
 		}
 		x.out.Actions = append(x.out.Actions, facts.Action{
@@ -324,7 +380,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			if isAction {
 				continue
 			}
-			if id, ok := x.competency(person, t.Body); ok {
+			if id, ok := x.competency(person, t.Body, lineNo); ok {
 				pol := 1
 				if t.Sigil == '-' {
 					pol = -1
@@ -338,19 +394,25 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			if isAction {
 				continue
 			}
-			if id, ok := x.competency(person, t.Body); ok {
+			if id, ok := x.competency(person, t.Body, lineNo); ok {
 				x.out.Touches = append(x.out.Touches, facts.Touch{
 					Person: person, Competency: id, Date: date, File: x.file, Line: lineNo, Text: txt,
 				})
 				x.count()
 			}
 		case '!':
-			cycle, ok := x.idx.Cycle(person, t.Body, date)
+			cycle, name, ok := x.idx.Cycle(person, t.Body, date)
 			if !ok {
-				continue // Task 6: input-unknown
+				sug := Suggest(t.Body, x.idx.InputNames(person))
+				if strings.EqualFold(sug, t.Body) {
+					sug = "" // right name, wrong date: nothing to rename
+				}
+				x.diagSuggest("input-unknown", lineNo, fmt.Sprintf(
+					"unknown input %q for %s on %s: no review cycle selecting them declares it for that date", t.Body, person, date), sug)
+				continue
 			}
 			x.out.Inputs = append(x.out.Inputs, facts.Input{
-				Person: person, Input: t.Body, Cycle: cycle, Date: date, File: x.file, Line: lineNo,
+				Person: person, Input: name, Cycle: cycle, Date: date, File: x.file, Line: lineNo,
 			})
 			x.count()
 		}
@@ -359,13 +421,14 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 
 // competency resolves a token (Decision E). Only Unknown is an extraction
 // error; Duplicate and NoFramework are reported by Rego.
-func (x *extractor) competency(person, token string) (string, bool) {
+func (x *extractor) competency(person, token string, line int) (string, bool) {
 	id, res := x.idx.Competency(person, token)
 	switch res {
 	case Resolved:
 		return id, true
 	case Unknown:
-		// Task 6: token-unknown with suggestion
+		x.diagSuggest("token-unknown", line, fmt.Sprintf("unknown competency token %q", token),
+			Suggest(token, x.idx.TokenNames(person)))
 	}
 	return "", false
 }

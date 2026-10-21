@@ -39,7 +39,7 @@ type cycle struct {
 	from, to   string // active range, YYYY-MM-DD inclusive
 	people     map[string]bool
 	matchRoles map[string]bool
-	inputs     map[string]bool
+	inputs     map[string]string // lower-case name -> declared name
 }
 
 // NewIndex builds the lookups from validated resources.
@@ -108,7 +108,7 @@ func newTokenMap(spec map[string]any) *tokenMap {
 }
 
 func newCycle(name string, spec map[string]any) cycle {
-	c := cycle{name: name, people: map[string]bool{}, matchRoles: map[string]bool{}, inputs: map[string]bool{}}
+	c := cycle{name: name, people: map[string]bool{}, matchRoles: map[string]bool{}, inputs: map[string]string{}}
 	period, _ := spec["period"].(map[string]any)
 	c.from, _ = period["from"].(string)
 	c.to, _ = period["to"].(string)
@@ -130,7 +130,7 @@ func newCycle(name string, spec map[string]any) cycle {
 	for _, in := range ins {
 		im, _ := in.(map[string]any)
 		if n, _ := im["name"].(string); n != "" {
-			c.inputs[n] = true
+			c.inputs[strings.ToLower(n)] = n
 		}
 	}
 	return c
@@ -230,15 +230,62 @@ func (idx *Index) Competency(person, token string) (string, Resolution) {
 }
 
 // Cycle returns the first cycle (by name) that selects the person, declares
-// the input and whose active range contains date (YYYY-MM-DD).
-func (idx *Index) Cycle(person, input, date string) (string, bool) {
+// the input (case-insensitively) and whose active range contains date
+// (YYYY-MM-DD), together with the input's declared name.
+func (idx *Index) Cycle(person, input, date string) (cycle, name string, ok bool) {
+	key := strings.ToLower(input)
 	for _, c := range idx.cycles {
-		if !c.people[person] && !c.matchRoles[idx.role[person]] {
+		if !c.selects(idx, person) {
 			continue
 		}
-		if c.inputs[input] && c.from <= date && date <= c.to {
-			return c.name, true
+		if n, has := c.inputs[key]; has && c.from <= date && date <= c.to {
+			return c.name, n, true
 		}
 	}
-	return "", false
+	return "", "", false
+}
+
+func (c cycle) selects(idx *Index, person string) bool {
+	return c.people[person] || c.matchRoles[idx.role[person]]
+}
+
+// InputNames lists the inputs of every cycle that selects the person, sorted.
+func (idx *Index) InputNames(person string) []string {
+	seen := map[string]bool{}
+	out := []string{}
+	for _, c := range idx.cycles {
+		if !c.selects(idx, person) {
+			continue
+		}
+		for _, n := range c.inputs {
+			if !seen[n] {
+				seen[n] = true
+				out = append(out, n)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// PersonNames lists every person name and alias, lower-case and sorted.
+func (idx *Index) PersonNames() []string { return idx.names }
+
+// TokenNames lists the tokens, ids and unambiguous id suffixes that resolve
+// for the person, lower-case and sorted.
+func (idx *Index) TokenNames(person string) []string {
+	tm, ok := idx.tokens[idx.framework[person]]
+	if !ok {
+		return nil
+	}
+	out := []string{}
+	for _, m := range []map[string]string{tm.explicit, tm.full, tm.suffix} {
+		for k, id := range m {
+			if id != "" {
+				out = append(out, k)
+			}
+		}
+	}
+	sort.Strings(out)
+	return out
 }
