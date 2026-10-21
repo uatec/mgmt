@@ -17,7 +17,7 @@ warn contains f if {
 	lib.add_days(m.due, 0 - _lead_days) <= input.now
 	input.now <= m.due
 	some o in okr.spec.objectives
-	some c in o.competencies
+	some c in object.get(o, "competencies", [])
 	derive.status[p][c].status == "unproven"
 	src := input.sources[sprintf("OKRSet/%s", [name])]
 	msg := sprintf("%s: OKR %q links %s, which is unproven; manager-draft is due %s", [p, o.title, c, m.due])

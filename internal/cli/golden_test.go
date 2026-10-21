@@ -469,6 +469,10 @@ func TestReportUsage(t *testing.T) {
 		{[]string{"report", "okrs", "sam", "extra"}, "mgmt: report takes <name> [<person>]\n"},
 		{[]string{"report", "../okrs"}, "mgmt: unknown report \"../okrs\"\n"},
 		{[]string{"report", "nope", "sam"}, "mgmt: unknown report \"nope\"\n"},
+		{[]string{"report", "status", "sam"}, "mgmt: status is a built-in report; run \"mgmt status\"\n"},
+		{[]string{"report", "explain", "sam"}, "mgmt: explain is a built-in report; run \"mgmt explain <person> <competency>\"\n"},
+		{[]string{"report", "prep"}, "mgmt: prep is a built-in report; run \"mgmt prep <person>\"\n"},
+		{[]string{"report", "review", "sam"}, "mgmt: review is a built-in report; run \"mgmt review <person>\"\n"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := Run(append([]string{"--now", "2026-10-21"}, tc.args...), root, &stdout, &stderr); code != 2 {

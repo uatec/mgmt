@@ -172,8 +172,18 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 	return renderReport(name, pos, cycle, true, root, now, stdout, stderr)
 }
 
+// builtinReports are the core reports with their own commands (Ruling R16):
+// their views are keyed differently, so `report` refuses them and names the
+// command instead. A workspace may still override their templates.
+var builtinReports = map[string]string{
+	"prep":    "prep <person>",
+	"review":  "review <person>",
+	"explain": "explain <person> <competency>",
+	"status":  "status",
+}
+
 // runCustomReport runs "report <name> [<person>] [--cycle NAME]": any
-// workspace or core template by name. Unlike the built-in commands, its
+// workspace template other than a built-in report's. Unlike the built-in commands, its
 // view may be null (Ruling R4): custom templates can use facts and derive.
 func runCustomReport(args []string, root, now string, stdout, stderr io.Writer) int {
 	pos, cycle, code := parseReportArgs("report", args, stderr)
@@ -182,6 +192,10 @@ func runCustomReport(args []string, root, now string, stdout, stderr io.Writer) 
 	}
 	if len(pos) < 1 || len(pos) > 2 {
 		return usageError(stderr, "report takes <name> [<person>]")
+	}
+	if usage, ok := builtinReports[pos[0]]; ok {
+		fmt.Fprintf(stderr, "mgmt: %s is a built-in report; run \"mgmt %s\"\n", pos[0], usage)
+		return 2
 	}
 	ok, err := render.Exists(pos[0], mgmt.CoreReports, filepath.Join(root, "reports"))
 	if err != nil {
@@ -403,7 +417,8 @@ func plainJSON(v any) (any, error) {
 // lintText renders findings one per line, errors and warnings interleaved in
 // file, line, id, person order, followed by a summary line. A finding with no
 // file (a workspace policy emitting a plain string) prints without a
-// location, as "warning <pkg>: <message>"; one with a file but no line
+// location, as "warning <pkg>: <message>" (Ruling R17: the one accepted
+// exception to every finding carrying file:line); one with a file but no line
 // prints "<file>: ...".
 func lintText(errs, warns []facts.Finding) string {
 	if len(errs)+len(warns) == 0 {

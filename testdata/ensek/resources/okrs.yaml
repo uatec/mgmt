@@ -16,3 +16,4 @@ spec:
         - rollout runbook published
         - no Sev1 incidents during the migration
       competencies: [delivery.ownership]
+    - title: Mentor the next platform joiner

@@ -80,3 +80,10 @@ test_silent_for_unknown_person if {
 	fs := ensek.warn with input as doc("2026-11-01", h2) with data.mgmt.derive.status as {}
 	count(fs) == 0
 }
+
+test_objective_without_competencies_is_silent if {
+	bare := json.patch(okr, [{"op": "replace", "path": "/spec/objectives", "value": [{"title": "Mentor"}]}])
+	d := json.patch(doc("2026-11-01", h2), [{"op": "replace", "path": "/resources/OKRSet/sam-h2", "value": bare}])
+	fs := ensek.warn with input as d with data.mgmt.derive.status as status
+	count(fs) == 0
+}

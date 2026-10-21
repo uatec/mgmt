@@ -162,7 +162,8 @@ func sortedKeys(m map[string]any) []string {
 // normally {id, person, file, line, message} (message falls back to msg).
 // Conftest-style entries are accepted too: a plain string becomes a finding
 // with id = pkg and that string as message and no location (lint prints it
-// as "error <pkg>: <message>"). An object without id gets id = pkg, and one
+// as "error <pkg>: <message>"; Ruling R17 accepts this exception to the
+// file:line rule, since a plain string has no location to give). An object without id gets id = pkg, and one
 // without message or msg gets its own compact JSON as message, so no
 // finding prints blank.
 func decodeFindings(v any, severity, pkg string) []facts.Finding {

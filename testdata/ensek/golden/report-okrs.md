@@ -11,3 +11,7 @@
 - KR: rollout runbook published
 - KR: no Sev1 incidents during the migration
 - delivery.ownership: proven
+
+### Mentor the next platform joiner
+- KR: none
+- no linked competencies

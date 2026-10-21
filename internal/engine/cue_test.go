@@ -178,3 +178,17 @@ func TestValidateDefinitionWithoutLiteralKind(t *testing.T) {
 		t.Fatalf("got %+v", fs)
 	}
 }
+
+// TestValidateSchemaDirStatError: only a missing <root>/schema is ignored.
+func TestValidateSchemaDirStatError(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "schema")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, dir := range []string{file, filepath.Join(file, "sub")} {
+		fs := Validate(nil, mgmt.CoreSchema, dir)
+		if len(fs) != 1 || fs[0].ID != "schema-invalid" || !strings.Contains(fs[0].Message, "schema does not compile: ") {
+			t.Errorf("%s: got %+v", dir, fs)
+		}
+	}
+}

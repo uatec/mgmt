@@ -2,6 +2,7 @@
 package engine
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"math"
@@ -43,10 +44,17 @@ func schemaFiles(core fs.FS, wsSchemaDir string) (map[string][]byte, error) {
 			return nil, err
 		}
 	}
-	if st, err := os.Stat(wsSchemaDir); err == nil && st.IsDir() {
-		if err := walk(os.DirFS(wsSchemaDir), "ws/"); err != nil {
-			return nil, err
-		}
+	st, err := os.Stat(wsSchemaDir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return files, nil // workspace schemas are optional
+	case err != nil:
+		return nil, err
+	case !st.IsDir():
+		return nil, fmt.Errorf("%s is not a directory", wsSchemaDir)
+	}
+	if err := walk(os.DirFS(wsSchemaDir), "ws/"); err != nil {
+		return nil, err
 	}
 	return files, nil
 }
