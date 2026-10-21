@@ -7,19 +7,14 @@
 
 ## retro-2026-h1
 
-```yaml
-status:
-  conditions:
-    - type: EvidenceComplete
-      status: "False"
-      reason: GapsRemain
-      message: 6 gaps across 2 people
-    - type: InputsComplete
-      status: "False"
-      reason: InputsMissing
-      message: 2 inputs missing across 2 people
-    - type: ActionsCurrent
-      status: "False"
-      reason: ActionsOverdue
-      message: 1 open action overdue
-```
+Next milestone: none
+
+- ✗ **Evidence:** 6 gaps
+  - priya: collab.feedback (unproven), delivery.ownership (unproven)
+  - sam: collab.feedback (unproven), collab.planning (unproven), delivery.ownership (unproven), scope.crossteam (unproven)
+- ✗ **Inputs:** 2 missing
+  - priya: self-assessment (0 of 1)
+  - sam: self-assessment (0 of 1)
+- ✗ **Actions:** 1 overdue
+  - sam
+    - send him the L4 section (due 2026-10-20) (notes/2026-W42.md:5)

@@ -65,6 +65,10 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"status", "--cycle", "nope"}, 2, "", "status-nope.stderr"},
 		{"spec-example", []string{"status"}, 0, "status.md", ""},
 		{"spec-example", []string{"--now", "2027-01-15", "status"}, 0, "status-no-cycle.md", ""},
+		{"team", []string{"status", "--format", "yaml"}, 0, "status-yaml.md", ""},
+		{"team", []string{"status", "--format=markdown"}, 0, "status.md", ""},
+		{"spec-example", []string{"status", "--format", "yaml"}, 0, "status-yaml.md", ""},
+		{"spec-example", []string{"--now", "2027-01-15", "status", "--format", "yaml"}, 0, "status-no-cycle.md", ""},
 		{"ensek", []string{"lint"}, 0, "lint.txt", ""},
 		{"ensek", []string{"--now", "2026-11-01", "lint"}, 0, "lint-2026-11-01.txt", ""},
 		{"ensek", []string{"prep", "sam"}, 0, "prep-sam.md", ""},
@@ -276,6 +280,10 @@ func TestUsageErrors(t *testing.T) {
 		{"explain", "sam"},
 		{"explain", "sam", "planning", "extra"},
 		{"status", "sam"},
+		{"status", "--format", "json"},
+		{"status", "--format"},
+		{"prep", "sam", "--format", "yaml"},
+		{"lint", "--format", "yaml"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := Run(args, root, &stdout, &stderr); code != 2 {
@@ -525,6 +533,7 @@ func TestReportUsage(t *testing.T) {
 		{[]string{"report", "../okrs"}, "mgmt: unknown report \"../okrs\"\n"},
 		{[]string{"report", "nope", "sam"}, "mgmt: unknown report \"nope\"\n"},
 		{[]string{"report", "status", "sam"}, "mgmt: status is a built-in report; run \"mgmt status\"\n"},
+		{[]string{"report", "status-yaml"}, "mgmt: status-yaml is a built-in report; run \"mgmt status --format yaml\"\n"},
 		{[]string{"report", "explain", "sam"}, "mgmt: explain is a built-in report; run \"mgmt explain <person> <competency>\"\n"},
 		{[]string{"report", "prep"}, "mgmt: prep is a built-in report; run \"mgmt prep <person>\"\n"},
 		{[]string{"report", "review", "sam"}, "mgmt: review is a built-in report; run \"mgmt review <person>\"\n"},

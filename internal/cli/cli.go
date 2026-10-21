@@ -32,7 +32,8 @@ commands:
   review <person> [--cycle NAME]       print the review evidence pack
   explain <person> <competency> [--cycle NAME]
                                        explain why a competency has its status
-  status [--cycle NAME]                print the team matrix and cycle conditions
+  status [--cycle NAME] [--format markdown|yaml]
+                                       print the team matrix and cycle checks
   report <name> [<person>] [--cycle NAME]
                                        run a workspace report (reports/<name>.tmpl)
 `
@@ -75,7 +76,7 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	case "explain":
 		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
 	case "status":
-		code = runReport("status", rest[1:], "", root, *now, &buf, stderr)
+		code = runStatus(rest[1:], root, *now, &buf, stderr)
 	case "report":
 		code = runCustomReport(rest[1:], root, *now, &buf, stderr)
 	default:
@@ -204,17 +205,43 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		}
 		return usageError(stderr, fmt.Sprintf("%s takes %s", name, argUsage))
 	}
-	return renderReport(name, pos, cycle, true, root, now, stdout, stderr)
+	return renderReport(name, name, pos, cycle, true, root, now, stdout, stderr)
+}
+
+// statusTemplates maps status --format to its template. Both format the
+// same view (report.status); yaml is the original Kubernetes-style
+// conditions block, kept for scripts. A workspace overrides either by name.
+var statusTemplates = map[string]string{"markdown": "status", "yaml": "status-yaml"}
+
+// runStatus parses "status [--cycle NAME] [--format markdown|yaml]".
+func runStatus(args []string, root, now string, stdout, stderr io.Writer) int {
+	fl := flag.NewFlagSet("status", flag.ContinueOnError)
+	fl.SetOutput(io.Discard)
+	cycle := fl.String("cycle", "", "")
+	format := fl.String("format", "markdown", "")
+	pos, err := parseInterspersed(fl, args)
+	if err != nil {
+		return usageError(stderr, "status: "+err.Error())
+	}
+	if len(pos) != 0 {
+		return usageError(stderr, "status takes no arguments")
+	}
+	tmpl, ok := statusTemplates[*format]
+	if !ok {
+		return usageError(stderr, fmt.Sprintf("status: unknown format %q", *format))
+	}
+	return renderReport("status", tmpl, nil, *cycle, true, root, now, stdout, stderr)
 }
 
 // builtinReports are the core reports with their own commands (Ruling R16):
 // their views are keyed differently, so `report` refuses them and names the
 // command instead. A workspace may still override their templates.
 var builtinReports = map[string]string{
-	"prep":    "prep <person>",
-	"review":  "review <person>",
-	"explain": "explain <person> <competency>",
-	"status":  "status",
+	"prep":        "prep <person>",
+	"review":      "review <person>",
+	"explain":     "explain <person> <competency>",
+	"status":      "status",
+	"status-yaml": "status --format yaml",
 }
 
 // runCustomReport runs "report <name> [<person>] [--cycle NAME]": any
@@ -241,7 +268,7 @@ func runCustomReport(args []string, root, now string, stdout, stderr io.Writer) 
 		fmt.Fprintf(stderr, "mgmt: unknown report %q\n", pos[0])
 		return 2
 	}
-	return renderReport(pos[0], pos[1:], cycle, false, root, now, stdout, stderr)
+	return renderReport(pos[0], pos[0], pos[1:], cycle, false, root, now, stdout, stderr)
 }
 
 // parseReportArgs returns the positional arguments and --cycle; code is
@@ -259,8 +286,9 @@ func parseReportArgs(name string, args []string, stderr io.Writer) (pos []string
 
 // renderReport runs the pipeline, refuses on errors (the lint text goes to
 // stderr), resolves pos[0] as the person and pos[1] as a competency of
-// theirs, and renders report name. strict makes a missing view an error.
-func renderReport(name string, pos []string, cycle string, strict bool, root, now string, stdout, stderr io.Writer) int {
+// theirs, and renders view name with template tmpl. strict makes a missing
+// view an error.
+func renderReport(name, tmpl string, pos []string, cycle string, strict bool, root, now string, stdout, stderr io.Writer) int {
 	opts := engine.Options{Now: now, Cycle: cycle}
 	res, err := engine.Run(root, opts)
 	if err != nil {
@@ -305,7 +333,7 @@ func renderReport(name string, pos []string, cycle string, strict bool, root, no
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
 		return 2
 	}
-	text, err := render.Render(name, data, mgmt.CoreReports, filepath.Join(root, "reports"))
+	text, err := render.Render(tmpl, data, mgmt.CoreReports, filepath.Join(root, "reports"))
 	if err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
 		return 2

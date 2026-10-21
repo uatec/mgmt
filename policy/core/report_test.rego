@@ -493,3 +493,108 @@ test_status_explicit_cycle_columns_follow_rows if {
 	s := report.status with input as only_priya
 	s.competencies == ["delivery.ownership"]
 }
+
+# --- status detail (per-person bullets) -----------------------------------
+
+test_status_next_milestone if {
+	s := report.status with input as base
+	s.cycles[0].nextMilestone == {"name": "peer-nominations", "due": "2026-10-27"}
+}
+
+test_status_next_milestone_none if {
+	past := json.patch(base, [
+		{"op": "replace", "path": "/now", "value": "2026-10-28"},
+		{"op": "replace", "path": "/options/cycle", "value": "ensek-2026-h2"},
+	])
+	s := report.status with input as past
+	s.cycles[0].nextMilestone == null
+}
+
+test_status_gaps_detail if {
+	marks := [object.union(mark(-1, "2026-09-01", "notes/a.md", 1), {"competency": "collab.planning"})]
+	facts := json.patch(two_people, [{"op": "replace", "path": "/evidence", "value": marks}])
+	s := report.status with input as facts
+	g := s.cycles[0].gaps
+	g.ok == false
+	g.summary == "4 gaps"
+	g.people == [
+		{"person": "priya", "items": [{"competency": "delivery.ownership", "status": "unproven"}]},
+		{"person": "sam", "items": [
+			{"competency": "collab.planning", "status": "disproven"},
+			{"competency": "delivery.ownership", "status": "unproven"},
+			{"competency": "scope.crossteam", "status": "unproven"},
+		]},
+	]
+}
+
+test_status_gaps_singular if {
+	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	s := report.status with input as one
+	s.cycles[0].gaps.summary == "1 gap"
+}
+
+test_status_gaps_clear if {
+	marks := [object.union(mark(1, "2026-09-01", "notes/a.md", 1), {"competency": "delivery.ownership"})]
+	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	s := report.status with input as l2
+	s.cycles[0].gaps == {"ok": true, "summary": "no gaps", "people": []}
+}
+
+test_status_inputs_detail if {
+	recs := [{"person": "sam", "cycle": "ensek-2026-h2", "input": "peer-feedback", "date": "2026-10-01", "file": "notes/a.md", "line": 1, "text": "t"}]
+	s := report.status with input as with_records("inputs", recs)
+	i := s.cycles[0].inputs
+	i.ok == false
+	i.summary == "3 missing"
+	i.people == [{"person": "sam", "items": [
+		{"name": "self-assessment", "received": 0, "needed": 1},
+		{"name": "peer-feedback", "received": 1, "needed": 3},
+		{"name": "okrs", "received": 0, "needed": 1},
+	]}]
+}
+
+test_status_inputs_clear if {
+	no_inputs := json.patch(base, [{"op": "remove", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/inputs"}])
+	s := report.status with input as no_inputs
+	s.cycles[0].inputs == {"ok": true, "summary": "all received", "people": []}
+}
+
+test_status_overdue_detail if {
+	acts := [
+		action("me", "2026-10-01", "notes/b.md", 2, false),
+		action("sam", "2026-10-20", "notes/a.md", 9, false),
+		action("me", "2026-10-01", "notes/a.md", 3, false),
+		action("me", "2026-10-21", "notes/a.md", 4, false), # due today
+		action("me", "", "notes/a.md", 5, false), # undated
+		action("me", "2026-10-01", "notes/a.md", 6, true), # done
+	]
+	s := report.status with input as with_records("actions", acts)
+	o := s.cycles[0].overdue
+	o.ok == false
+	o.summary == "3 overdue"
+	[p.person | some p in o.people] == ["sam"]
+	locs(o.people[0].items) == ["notes/a.md:9", "notes/a.md:3", "notes/b.md:2"]
+	o.people[0].items[0].text == "a9"
+}
+
+test_status_overdue_singular_and_population if {
+	acts := [
+		action("me", "2026-10-20", "notes/a.md", 1, false),
+		json.patch(action("me", "2026-10-20", "notes/a.md", 2, false), [{"op": "replace", "path": "/person", "value": "priya"}]),
+	]
+	facts := json.patch(with_records("actions", acts), [{"op": "add", "path": "/resources/Person/priya", "value": priya}])
+	s := report.status with input as facts
+	s.cycles[0].overdue.summary == "1 overdue"
+	[p.person | some p in s.cycles[0].overdue.people] == ["sam"]
+}
+
+test_status_overdue_clear if {
+	s := report.status with input as base
+	s.cycles[0].overdue == {"ok": true, "summary": "none overdue", "people": []}
+}
+
+test_status_detail_missing_framework_is_total if {
+	broken := json.patch(two_people, [{"op": "replace", "path": "/resources/Person/priya/spec/framework", "value": "nope"}])
+	s := report.status with input as broken
+	[p.person | some p in s.cycles[0].gaps.people] == ["sam"]
+}

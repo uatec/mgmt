@@ -208,7 +208,16 @@ status := {
 	"rows": [{"person": p, "cells": [{"competency": c, "status": _cell(p, c)} | some c in _status_competencies]} |
 		some p in _status_people
 	],
-	"cycles": [{"name": cy, "conditions": _conditions(cy)} | some cy in derive.active_cycles],
+	"cycles": [{
+		"name": cy,
+		"conditions": _conditions(cy),
+		"nextMilestone": object.get(derive.next_milestone, cy, null),
+		"gaps": _check(_gap_detail(cy), _plural(_count_items(_gap_detail(cy)), "gap", "gaps"), "no gaps"),
+		"inputs": _check(_input_detail(cy), sprintf("%d missing", [_count_items(_input_detail(cy))]), "all received"),
+		"overdue": _check(_overdue_detail(cy), sprintf("%d overdue", [_count_items(_overdue_detail(cy))]), "none overdue"),
+	} |
+		some cy in derive.active_cycles
+	],
 }
 
 _status_people := sort(object.keys(_persons)) if _option_cycle == ""
@@ -278,3 +287,36 @@ _actions_condition(cy) := {
 } if {
 	count(_overdue_actions(cy)) > 0
 }
+
+# --- status detail: who has what, per check -------------------------------
+
+# _check summarises one check's per-person detail ([{person, items}], people
+# by name, only people with items) for the bullet list.
+_check(people, summary, _) := {"ok": false, "summary": summary, "people": people} if count(people) > 0
+
+_check(people, _, clear) := {"ok": true, "summary": clear, "people": []} if count(people) == 0
+
+_count_items(people) := sum([count(p.items) | some p in people])
+
+_detail(cy, f) := [{"person": p, "items": items} |
+	some p in _cycle_people(cy)
+	items := f[p]
+	count(items) > 0
+]
+
+# Gaps in derive.gaps order (disproven first, then by id).
+_gap_detail(cy) := _detail(cy, {p: object.get(derive.gaps, p, []) | some p in _cycle_people(cy)})
+
+# Incomplete inputs in the cycle's order.
+_input_detail(cy) := _detail(cy, {p: [{"name": i.name, "received": i.received, "needed": max({i.minCount, 1})} |
+	some i in object.get(derive.inputs, [cy, p], [])
+	not i.complete
+] | some p in _cycle_people(cy)})
+
+# Overdue open actions, most recently due first, then by file and line.
+_overdue_detail(cy) := _detail(cy, {p: _newest_due_first([a | some a in _overdue_actions(cy); a.person == p]) | some p in _cycle_people(cy)})
+
+_newest_due_first(actions) := [a |
+	some due in array.reverse(sort({x.due | some x in actions}))
+	some a in _by_key([[[x.file, x.line], x] | some x in actions; x.due == due])
+]

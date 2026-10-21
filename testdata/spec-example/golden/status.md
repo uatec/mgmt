@@ -8,19 +8,14 @@
 
 ## ensek-2026-h2
 
-```yaml
-status:
-  conditions:
-    - type: EvidenceComplete
-      status: "False"
-      reason: GapsRemain
-      message: 7 gaps across 3 people
-    - type: InputsComplete
-      status: "False"
-      reason: InputsMissing
-      message: 8 inputs missing across 3 people
-    - type: ActionsCurrent
-      status: "True"
-      reason: NoOverdueActions
-      message: no overdue actions
-```
+Next milestone: peer-nominations, due 2026-10-27
+
+- ✗ **Evidence:** 7 gaps
+  - jo: collab.planning (unproven), delivery.ownership (unproven), scope.crossteam (unproven)
+  - priya: delivery.ownership (unproven)
+  - sam: collab.planning (unproven), delivery.ownership (unproven), scope.crossteam (unproven)
+- ✗ **Inputs:** 8 missing
+  - jo: self-assessment (0 of 1), peer-feedback (0 of 3), okrs (0 of 1)
+  - priya: self-assessment (0 of 1), peer-feedback (0 of 3), okrs (0 of 1)
+  - sam: peer-feedback (0 of 3), okrs (0 of 1)
+- ✓ **Actions:** none overdue

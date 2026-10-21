@@ -9,19 +9,14 @@
 
 ## ensek-2026-h2
 
-```yaml
-status:
-  conditions:
-    - type: EvidenceComplete
-      status: "False"
-      reason: GapsRemain
-      message: 6 gaps across 2 people
-    - type: InputsComplete
-      status: "False"
-      reason: InputsMissing
-      message: 5 inputs missing across 2 people
-    - type: ActionsCurrent
-      status: "False"
-      reason: ActionsOverdue
-      message: 1 open action overdue
-```
+Next milestone: peer-nominations, due 2026-10-27
+
+- ✗ **Evidence:** 6 gaps
+  - jo: collab.feedback (unproven), collab.planning (unproven), delivery.ownership (unproven), scope.crossteam (unproven)
+  - sam: collab.planning (disproven), scope.crossteam (unproven)
+- ✗ **Inputs:** 5 missing
+  - jo: self-assessment (0 of 1), peer-feedback (0 of 3), okrs (0 of 1)
+  - sam: peer-feedback (1 of 3), okrs (0 of 1)
+- ✗ **Actions:** 1 overdue
+  - sam
+    - send him the L4 section (due 2026-10-20) (notes/2026-W42.md:5)

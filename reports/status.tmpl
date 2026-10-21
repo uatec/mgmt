@@ -10,16 +10,18 @@
 {{- range .cycles}}
 ## {{.name}}
 
-```yaml
-status:
-  conditions:
-{{- range .conditions}}
-    - type: {{.type}}
-      status: "{{.status}}"
-      reason: {{.reason}}
-      message: {{.message}}
-{{- end}}
-```
+Next milestone: {{with .nextMilestone}}{{.name}}, due {{.due}}{{else}}none{{end}}
+
+{{with .gaps}}- {{if .ok}}✓{{else}}✗{{end}} **Evidence:** {{.summary}}
+{{range .people}}  - {{.person}}: {{range $i, $g := .items}}{{if $i}}, {{end}}{{$g.competency}} ({{$g.status}}){{end}}
+{{end}}{{end -}}
+{{with .inputs}}- {{if .ok}}✓{{else}}✗{{end}} **Inputs:** {{.summary}}
+{{range .people}}  - {{.person}}: {{range $i, $in := .items}}{{if $i}}, {{end}}{{$in.name}} ({{$in.received}} of {{$in.needed}}){{end}}
+{{end}}{{end -}}
+{{with .overdue}}- {{if .ok}}✓{{else}}✗{{end}} **Actions:** {{.summary}}
+{{range .people}}  - {{.person}}
+{{range .items}}    - {{.text}} (due {{.due}}) ({{.file}}:{{.line}})
+{{end}}{{end}}{{end -}}
 {{end}}
 {{- if not .cycles}}
 No active review cycle.
