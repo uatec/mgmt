@@ -51,6 +51,11 @@ func TestHeadingDate(t *testing.T) {
 		{"Sam (Sat 31 Dec)", d(2027, 1, 3), d(2026, 12, 31), true},
 		{"1:1 Sam", ref, time.Time{}, false},
 		{"Sam 30 Feb 2026", ref, time.Time{}, false},
+		{"1:1 May", ref, time.Time{}, false},
+		{"1:1 Jan", ref, time.Time{}, false},
+		{"1:1 June", ref, time.Time{}, false},
+		{"Sam 1 May", ref, d(2026, 5, 1), true},
+		{"1:1 Sam (1 May)", ref, d(2026, 5, 1), true},
 	}
 	for _, c := range cases {
 		got, ok := HeadingDate(c.in, c.ref)

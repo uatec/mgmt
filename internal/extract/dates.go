@@ -13,8 +13,9 @@ var (
 	fileDayRe  = regexp.MustCompile(`^(\d{4})-(\d{2})-(\d{2})`)
 	isoDayRe   = regexp.MustCompile(`\b(\d{4})-(\d{2})-(\d{2})\b`)
 	isoWeekRe  = regexp.MustCompile(`\b(\d{4})-W(\d{2})\b`)
-	// optional weekday is skipped; only "D Mon [YYYY]" matters.
-	headDMYRe = regexp.MustCompile(`(?i)\b(\d{1,2})\s+([a-z]{3,9})(?:\s+(\d{4}))?\b`)
+	// optional weekday is skipped; only "D Mon [YYYY]" matters. The day must
+	// follow start-of-text, whitespace or "(" so "1:1 May" is not a date.
+	headDMYRe = regexp.MustCompile(`(?i)(?:^|[\s(])(\d{1,2})\s+([a-z]{3,9})(?:\s+(\d{4}))?\b`)
 	dueDMRe   = regexp.MustCompile(`^(\d{1,2})\s?([A-Za-z]{3,9})$`)
 )
 
@@ -115,7 +116,7 @@ func HeadingDate(text string, ref time.Time) (time.Time, bool) {
 			t, ok = nearestYear(int(mon), dd, ref)
 		}
 		if ok {
-			consider(m[0], t, true)
+			consider(m[2], t, true)
 			break
 		}
 	}

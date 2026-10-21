@@ -223,3 +223,21 @@ func TestActionLines(t *testing.T) {
 		t.Errorf("continuation evidence = %+v", got.Evidence)
 	}
 }
+
+func TestOneOnOneMonthNamedPerson(t *testing.T) {
+	res, _ := loadSpec(t)
+	for _, r := range res {
+		if r.Kind == "Person" && r.Name == "priya" {
+			spec := r.Object["spec"].(map[string]any)
+			spec["aliases"] = []any{"Priya", "May"}
+		}
+	}
+	src := "# 2026-W43\n\n## 1:1 May\n- +crossteam helped\n"
+	got := Extract([]load.NoteFile{{Path: "notes/2026-W43.md", Source: []byte(src)}}, NewIndex(res))
+	if len(got.Evidence) != 1 || got.Evidence[0].Person != "priya" || got.Evidence[0].Date != "2026-10-19" {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+	if len(got.Sections) != 1 || got.Sections[0].Date != "2026-10-19" {
+		t.Errorf("sections = %+v", got.Sections)
+	}
+}
