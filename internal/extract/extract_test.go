@@ -252,3 +252,55 @@ func TestAttributedLineDoesNotCountForSection(t *testing.T) {
 		t.Errorf("sections = %+v, want %+v", got.Sections, want)
 	}
 }
+
+func TestFrontMatterIgnored(t *testing.T) {
+	src := "---\ntags: [journal]\n# Sam\n+ownership in yaml\n---\n# 2026-10-21\n\n## 1:1 Sam\n- +ownership led it\n"
+	for _, variant := range []string{src, strings.ReplaceAll(src, "\n", "\r\n"), "\xef\xbb\xbf" + src} {
+		got := extractOne(t, "2026-10-21.md", variant)
+		if len(got.Evidence) != 1 || got.Evidence[0].Line != 9 || got.Evidence[0].Person != "sam" {
+			t.Fatalf("evidence = %+v", got.Evidence)
+		}
+		if len(got.Sections) != 1 || got.Sections[0].Line != 8 {
+			t.Errorf("sections = %+v", got.Sections)
+		}
+		if len(got.Diagnostics) != 0 {
+			t.Errorf("diagnostics = %+v", got.Diagnostics)
+		}
+	}
+}
+
+func TestFrontMatterDotsCloseAndTrailingSpace(t *testing.T) {
+	got := extractOne(t, "2026-10-21.md", "---  \ntitle: x\n...\n## Sam\n- +ownership ok\n")
+	if len(got.Evidence) != 1 || got.Evidence[0].Line != 5 {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+}
+
+func TestFrontMatterUnclosedNotSwallowed(t *testing.T) {
+	got := extractOne(t, "2026-10-21.md", "---\n## Sam\n- +ownership ok\n")
+	if len(got.Evidence) != 1 || got.Evidence[0].Line != 3 {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+}
+
+func TestThematicBreakLaterIsNotFrontMatter(t *testing.T) {
+	got := extractOne(t, "2026-10-21.md", "## Sam\n- +ownership one\n\n---\n\n- +ownership two\n---\n")
+	if len(got.Evidence) != 2 || got.Evidence[1].Line != 6 {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+	// Leading blank line: a --- after it is not front matter either.
+	got = extractOne(t, "2026-10-21.md", "\n---\n## Sam\n- +ownership x\n---\n")
+	if len(got.Evidence) != 1 || got.Evidence[0].Line != 4 {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+}
+
+func TestObsidianLinkHeadingSetsPerson(t *testing.T) {
+	got := extractOne(t, "2026-10-21.md", "## 1:1 [[Sam]]\n- +ownership led it\n## 1:1 [[Sam|Samuel]]\n- +planning x\n")
+	if len(got.Evidence) != 2 || got.Evidence[0].Person != "sam" {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+	if len(got.Sections) != 2 {
+		t.Errorf("sections = %+v", got.Sections)
+	}
+}

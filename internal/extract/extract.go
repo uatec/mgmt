@@ -68,6 +68,7 @@ func newExtractor(f load.NoteFile, idx *Index, out *facts.Facts) *extractor {
 	src := bytes.TrimPrefix(f.Source, []byte("\xef\xbb\xbf"))
 	src = bytes.ReplaceAll(src, []byte("\r\n"), []byte("\n"))
 	src = bytes.ReplaceAll(src, []byte("\r"), []byte("\n"))
+	src = blankFrontMatter(src)
 	x := &extractor{idx: idx, out: out, file: f.Path, src: src, lineStarts: []int{0}, first: len(out.Diagnostics)}
 	for i, c := range src {
 		if c == '\n' {
@@ -76,6 +77,35 @@ func newExtractor(f load.NoteFile, idx *Index, out *facts.Facts) *extractor {
 	}
 	x.fileDate, _ = FileDate(f.Path)
 	return x
+}
+
+// blankFrontMatter replaces a leading YAML front matter block (a first line
+// of exactly "---", closed by "---" or "...") with empty lines, so nothing in
+// it is extracted while later line numbers stay put. src is already BOM- and
+// CR-free. Without a closing delimiter the file is returned unchanged.
+func blankFrontMatter(src []byte) []byte {
+	isDelim := func(l []byte, set ...string) bool {
+		l = bytes.TrimRight(l, " \t")
+		for _, d := range set {
+			if string(l) == d {
+				return true
+			}
+		}
+		return false
+	}
+	lines := bytes.Split(src, []byte("\n"))
+	if len(lines) == 0 || !isDelim(lines[0], "---") {
+		return src
+	}
+	for i := 1; i < len(lines); i++ {
+		if isDelim(lines[i], "---", "...") {
+			for j := 0; j <= i; j++ {
+				lines[j] = nil
+			}
+			return bytes.Join(lines, []byte("\n"))
+		}
+	}
+	return src
 }
 
 // diag records an extraction error.
