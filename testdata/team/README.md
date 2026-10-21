@@ -80,10 +80,12 @@ lint warnings.
 - Last 1:1 section: W42 (2026-10-12), nothing since. No gaps. Focus:
   delivery.ownership, last touched 2026-09-28.
 
-## review actions (Ruling R14)
+## review actions (Ruling R14, amended)
 
-The review pack lists only actions dated within the window: sam's W42:6 and
-priya's W41:7 fall after their 2026-09-30 window end, so their packs show no
-actions.
+The review pack lists actions dated from the window start to the cycle's
+active end (the later of period.to and the last milestone), or to the window
+end without a cycle. For ensek-2026-h2 that runs to 2026-11-28, so sam's W42:6
+and priya's W41:7 show. For retro-2026-h1 (no milestones) it ends 2026-03-31,
+so `review sam --cycle retro-2026-h1` shows no actions.
 
 Note text avoids the words rating, below, meets and exceeds (Ruling R5).

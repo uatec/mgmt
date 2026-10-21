@@ -145,16 +145,23 @@ _review_item(p, c) := {
 	"status": object.get(derive.status, [p, c, "status"], "unproven"),
 	"positive": _newest_first([m | some m in ms; m.polarity > 0]),
 	"negative": _newest_first([m | some m in ms; m.polarity < 0]),
-	"actions": [a | some a in object.get(derive.addressed_by, [p, c], []); _in_window(p, a.date)],
+	"actions": [a | some a in object.get(derive.addressed_by, [p, c], []); _in_actions_range(p, a.date)],
 } if {
 	ms := object.get(derive.marks, [p, c], [])
 }
 
-# Ruling R14: the pack shows actions dated within the window, like evidence.
-_in_window(p, date) if {
+# Ruling R14 (amended): the pack shows actions dated from the window start
+# to the cycle's active end (the later of period.to and the last milestone),
+# or to the window end without a cycle, so actions agreed after the period
+# but during the review still show.
+_in_actions_range(p, date) if {
 	derive.window[p].from <= date
-	date <= derive.window[p].to
+	date <= _actions_end(p)
 }
+
+_actions_end(p) := derive.active_end[derive.cycle[p]] if {
+	derive.cycle[p]
+} else := derive.window[p].to
 
 # _newest_first sorts records descending by [date, file, line].
 _newest_first(records) := array.reverse(_by_key([[[r.date, r.file, r.line], r] | some r in records]))

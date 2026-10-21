@@ -35,6 +35,9 @@ _since(p) := object.get(_persons[p], ["spec", "since"], "")
 # _active_end is the later of period.to and the last milestone's due date.
 _active_end(c) := max({c.spec.period.to} | {m.due | some m in object.get(c, ["spec", "milestones"], [])})
 
+# active_end[cy] is the last day of the cycle's active range.
+active_end[cy] := _active_end(c) if some cy, c in _cycles
+
 _option_cycle := object.get(input, ["options", "cycle"], "")
 
 active_cycles := [_option_cycle] if _option_cycle != ""

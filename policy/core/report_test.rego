@@ -234,8 +234,9 @@ test_review_groups_required_by_theme_newest_first if {
 	closed := object.union(action("sam", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"], "date": "2026-05-01"})
 	before := object.union(action("me", "", "notes/a.md", 7, true), {"addresses": ["collab.planning"], "date": "2026-04-30"})
 	after := object.union(action("me", "", "notes/a.md", 8, false), {"addresses": ["collab.planning"]}) # 2026-10-01
+	late := object.union(action("me", "", "notes/a.md", 9, false), {"addresses": ["collab.planning"], "date": "2026-10-28"})
 	facts := json.patch(base, [
-		{"op": "replace", "path": "/actions", "value": [open, closed, before, after]},
+		{"op": "replace", "path": "/actions", "value": [open, closed, before, after, late]},
 		{"op": "replace", "path": "/evidence", "value": [
 			mark(1, "2026-08-10", "notes/b.md", 6),
 			mark(-1, "2026-09-14", "notes/c.md", 6),
@@ -254,10 +255,34 @@ test_review_groups_required_by_theme_newest_first if {
 	planning.status == "disproven"
 	locs(planning.positive) == ["notes/b.md:6", "notes/a.md:3"]
 	locs(planning.negative) == ["notes/c.md:6"]
-	# R14: only actions dated within the window (2026-05-01..2026-09-30).
-	locs(planning.actions) == ["notes/a.md:2", "notes/a.md:1"]
+	# R14 (amended): actions dated from the window start to the cycle's
+	# active end (last milestone 2026-10-27), so the post-period one shows.
+	locs(planning.actions) == ["notes/a.md:2", "notes/a.md:1", "notes/a.md:8"]
 	r.themes[1].competencies[0].positive == []
 	r.themes[1].competencies[0].actions == []
+}
+
+# R14 (amended): a past cycle without milestones ends with its period, so
+# actions after period.to are left out.
+test_review_actions_past_cycle_end_at_period if {
+	inside := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"], "date": "2026-09-30"})
+	after := object.union(action("me", "", "notes/a.md", 2, false), {"addresses": ["collab.planning"]}) # 2026-10-01
+	facts := json.patch(base, [
+		{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/milestones", "value": []},
+		{"op": "replace", "path": "/options/cycle", "value": "ensek-2026-h2"},
+		{"op": "replace", "path": "/actions", "value": [inside, after]},
+	])
+	r := report.review.sam with input as facts
+	locs(r.themes[0].competencies[0].actions) == ["notes/a.md:1"]
+}
+
+# Without a cycle, actions run to the rolling window's end (now).
+test_review_actions_rolling_end_at_now if {
+	inside := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"], "date": "2026-10-21"})
+	future := object.union(action("me", "", "notes/a.md", 2, false), {"addresses": ["collab.planning"], "date": "2026-10-22"})
+	facts := json.patch(doc({"sam": sam}, {}), [{"op": "replace", "path": "/actions", "value": [inside, future]}])
+	r := report.review.sam with input as facts
+	locs(r.themes[0].competencies[0].actions) == ["notes/a.md:1"]
 }
 
 test_review_inputs_sorted_by_name if {

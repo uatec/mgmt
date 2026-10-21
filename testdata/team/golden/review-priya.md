@@ -30,7 +30,7 @@ Negative:
 - none
 
 Actions:
-- none
+- [ ] 2026-10-05 · draft the DNS runbook (notes/2026-W41.md:7)
 
 ## Cycle inputs
 - [x] okrs (notes/2026-W35.md:4)
