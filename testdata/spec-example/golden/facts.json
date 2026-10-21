@@ -1,0 +1,327 @@
+{
+  "actions": [
+    {
+      "addresses": [
+        "collab.planning"
+      ],
+      "date": "2026-10-19",
+      "done": false,
+      "due": "2026-10-28",
+      "file": "notes/2026-W43.md",
+      "id": "87b69f5ef7e07901f52c4506b70fe383cc11fdc1",
+      "line": 8,
+      "owner": "me",
+      "person": "sam",
+      "text": "send him the L4 section"
+    },
+    {
+      "addresses": [],
+      "date": "2026-10-19",
+      "done": false,
+      "due": "2026-10-23",
+      "file": "notes/2026-W43.md",
+      "id": "6ffbc0bb0b8c2fb1374836f6a4291a5805379079",
+      "line": 9,
+      "owner": "sam",
+      "person": "sam",
+      "text": "draft the CDN provisioning plan"
+    }
+  ],
+  "diagnostics": [],
+  "evidence": [
+    {
+      "competency": "delivery.ownership",
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "line": 5,
+      "person": "sam",
+      "polarity": 1,
+      "text": "led the incident review well"
+    },
+    {
+      "competency": "collab.planning",
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "line": 6,
+      "person": "sam",
+      "polarity": -1,
+      "text": "quiet in refinement again"
+    },
+    {
+      "competency": "scope.crossteam",
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "line": 13,
+      "person": "priya",
+      "polarity": 1,
+      "text": "unblocked the SRE handover"
+    }
+  ],
+  "ignores": [],
+  "inputs": [
+    {
+      "cycle": "ensek-2026-h2",
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "input": "self-assessment",
+      "line": 10,
+      "person": "sam"
+    }
+  ],
+  "now": "2026-10-21",
+  "options": {
+    "cycle": ""
+  },
+  "resources": {
+    "CompetencyFramework": {
+      "eng": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "CompetencyFramework",
+        "metadata": {
+          "name": "eng"
+        },
+        "spec": {
+          "competencies": [
+            {
+              "id": "delivery.ownership",
+              "title": "Owns outcomes end to end",
+              "tokens": [
+                "ownership",
+                "own"
+              ]
+            },
+            {
+              "id": "collab.planning",
+              "title": "Contributes actively to planning and refinement",
+              "tokens": [
+                "planning",
+                "plan"
+              ]
+            },
+            {
+              "id": "scope.crossteam",
+              "title": "Delivers work that spans teams",
+              "tokens": [
+                "crossteam",
+                "xteam"
+              ]
+            }
+          ],
+          "roles": [
+            {
+              "levels": [
+                {
+                  "expects": [
+                    "delivery.ownership"
+                  ],
+                  "name": "L2"
+                },
+                {
+                  "expects": [
+                    "collab.planning",
+                    "scope.crossteam"
+                  ],
+                  "inherits": "L2",
+                  "name": "L3",
+                  "removes": []
+                }
+              ],
+              "name": "platform-engineer"
+            }
+          ]
+        }
+      }
+    },
+    "Person": {
+      "jo": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "Person",
+        "metadata": {
+          "name": "jo"
+        },
+        "spec": {
+          "aliases": [
+            "Jo"
+          ],
+          "displayName": "Jo Example",
+          "framework": "eng",
+          "level": "L3",
+          "role": "platform-engineer",
+          "since": "2026-05-01"
+        }
+      },
+      "priya": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "Person",
+        "metadata": {
+          "name": "priya"
+        },
+        "spec": {
+          "aliases": [
+            "Priya"
+          ],
+          "displayName": "Priya Example",
+          "framework": "eng",
+          "level": "L2",
+          "role": "platform-engineer",
+          "since": "2026-05-01"
+        }
+      },
+      "sam": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "Person",
+        "metadata": {
+          "name": "sam"
+        },
+        "spec": {
+          "aliases": [
+            "Sam",
+            "Samuel"
+          ],
+          "displayName": "Sam Example",
+          "framework": "eng",
+          "level": "L3",
+          "oneToOneCadence": "7d",
+          "role": "platform-engineer",
+          "since": "2026-05-01"
+        }
+      }
+    },
+    "ReviewCycle": {
+      "ensek-2026-h2": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "ReviewCycle",
+        "metadata": {
+          "name": "ensek-2026-h2"
+        },
+        "spec": {
+          "evidence": {
+            "minPerCompetency": 1,
+            "negativeOverrides": true
+          },
+          "framework": "eng",
+          "inputs": [
+            {
+              "name": "self-assessment",
+              "required": true,
+              "source": "leapsome"
+            },
+            {
+              "minCount": 3,
+              "name": "peer-feedback",
+              "source": "leapsome"
+            },
+            {
+              "name": "okrs",
+              "required": true
+            }
+          ],
+          "milestones": [
+            {
+              "due": "2026-10-27",
+              "name": "peer-nominations"
+            },
+            {
+              "due": "2026-11-07",
+              "name": "peer-feedback"
+            },
+            {
+              "due": "2026-11-14",
+              "name": "manager-draft"
+            },
+            {
+              "due": "2026-11-21",
+              "name": "calibration"
+            },
+            {
+              "due": "2026-11-28",
+              "name": "conversations"
+            }
+          ],
+          "outcomes": {
+            "promotionNomination": true,
+            "ratings": [
+              "below",
+              "meets",
+              "exceeds"
+            ]
+          },
+          "period": {
+            "from": "2026-04-01",
+            "to": "2026-09-30"
+          },
+          "selector": {
+            "people": [
+              "sam",
+              "priya",
+              "jo"
+            ]
+          }
+        }
+      }
+    },
+    "Workspace": {
+      "default": {
+        "apiVersion": "mgmt/v1alpha1",
+        "kind": "Workspace",
+        "metadata": {
+          "name": "default"
+        },
+        "spec": {
+          "defaultWindow": "90d",
+          "me": [
+            "me",
+            "robert"
+          ],
+          "notes": "notes/**/*.md",
+          "oneToOneCadence": "14d"
+        }
+      }
+    }
+  },
+  "sections": [
+    {
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "line": 3,
+      "person": "sam",
+      "tokenCount": 6
+    }
+  ],
+  "sources": {
+    "CompetencyFramework/eng": {
+      "file": "resources/framework.yaml",
+      "line": 1
+    },
+    "Person/jo": {
+      "file": "resources/people.yaml",
+      "line": 26
+    },
+    "Person/priya": {
+      "file": "resources/people.yaml",
+      "line": 14
+    },
+    "Person/sam": {
+      "file": "resources/people.yaml",
+      "line": 1
+    },
+    "ReviewCycle/ensek-2026-h2": {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "line": 1
+    },
+    "Workspace/default": {
+      "file": "resources/workspace.yaml",
+      "line": 1
+    }
+  },
+  "touches": [
+    {
+      "competency": "scope.crossteam",
+      "date": "2026-10-19",
+      "file": "notes/2026-W43.md",
+      "line": 7,
+      "person": "sam",
+      "text": "discussed the Zoa access ask"
+    }
+  ]
+}

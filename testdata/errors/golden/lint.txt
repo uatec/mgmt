@@ -1,0 +1,12 @@
+notes/2026-W43.md:5: error token-unknown: unknown competency token "plannig" (did you mean "planning"?)
+notes/2026-W43.md:6: error person-unknown: unknown person "samm" (did you mean "sam"?)
+notes/2026-W43.md:7: error evidence-in-action: evidence token "+ownership" on an action; evidence belongs on its own line (use ~ to say what the action addresses)
+notes/2026-W43.md:8: error input-unknown: unknown input "self-asessment" for sam on 2026-10-19: no review cycle selecting them declares it for that date (did you mean "self-assessment"?)
+notes/2026-W43.md:9: error line-multi-person: line names two people: "sam" and "priya"
+notes/2026-W43.md:12: error heading-multi-person: heading names several people (priya, sam); put @person on the line to say whose +ownership is
+notes/2026-W43.md:15: error person-missing: +crossteam has no person: no @person on the line and no person heading above it
+notes/misc.md:1: error date-unresolved: no date in the file name or its first-level heading
+resources/framework.yaml:1: error token-duplicate: token "plan" is claimed by collab.planning, scope.crossteam
+resources/people.yaml:23: error ref-unknown [jo]: person "jo": unknown level "L9" for role "platform-engineer"
+resources/people.yaml:45: error alias-duplicate [alexander]: name or alias "alex" is shared by alex, alexander
+11 errors, 0 warnings

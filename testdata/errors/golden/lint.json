@@ -1,0 +1,96 @@
+{
+  "errors": [
+    {
+      "file": "notes/2026-W43.md",
+      "id": "token-unknown",
+      "line": 5,
+      "message": "unknown competency token \"plannig\"",
+      "person": "",
+      "severity": "error",
+      "suggest": "planning"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "person-unknown",
+      "line": 6,
+      "message": "unknown person \"samm\"",
+      "person": "",
+      "severity": "error",
+      "suggest": "sam"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "evidence-in-action",
+      "line": 7,
+      "message": "evidence token \"+ownership\" on an action; evidence belongs on its own line (use ~ to say what the action addresses)",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "input-unknown",
+      "line": 8,
+      "message": "unknown input \"self-asessment\" for sam on 2026-10-19: no review cycle selecting them declares it for that date",
+      "person": "",
+      "severity": "error",
+      "suggest": "self-assessment"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "line-multi-person",
+      "line": 9,
+      "message": "line names two people: \"sam\" and \"priya\"",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "heading-multi-person",
+      "line": 12,
+      "message": "heading names several people (priya, sam); put @person on the line to say whose +ownership is",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "notes/2026-W43.md",
+      "id": "person-missing",
+      "line": 15,
+      "message": "+crossteam has no person: no @person on the line and no person heading above it",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "notes/misc.md",
+      "id": "date-unresolved",
+      "line": 1,
+      "message": "no date in the file name or its first-level heading",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "resources/framework.yaml",
+      "id": "token-duplicate",
+      "line": 1,
+      "message": "token \"plan\" is claimed by collab.planning, scope.crossteam",
+      "person": "",
+      "severity": "error"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "ref-unknown",
+      "line": 23,
+      "message": "person \"jo\": unknown level \"L9\" for role \"platform-engineer\"",
+      "person": "jo",
+      "severity": "error"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "alias-duplicate",
+      "line": 45,
+      "message": "name or alias \"alex\" is shared by alex, alexander",
+      "person": "alexander",
+      "severity": "error"
+    }
+  ],
+  "warnings": []
+}

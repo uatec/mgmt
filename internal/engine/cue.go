@@ -1,4 +1,4 @@
-// Package engine validates resources against CUE schemas.
+// Package engine validates resources, evaluates policies and runs the pipeline.
 package engine
 
 import (

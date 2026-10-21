@@ -1,0 +1,16 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: sam
+spec:
+  aliases: [Sam]
+  framework: eng
+  role: platform-engineer
+  level: L3
+  since: 1 May 2026
+---
+apiVersion: mgmt/v1alpha1
+kind: Persn
+metadata:
+  name: priya
+spec: {}
