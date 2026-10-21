@@ -38,6 +38,13 @@ func TestGolden(t *testing.T) {
 		{"schema-errors", []string{"lint"}, 2, "lint.txt", ""},
 		{"warnings", []string{"lint", "--strict"}, 1, "lint.txt", ""},
 		{"team", []string{"lint"}, 0, "lint.txt", ""},
+		{"spec-example", []string{"lint", "--format", "flat"}, 0, "lint-flat.txt", ""},
+		{"errors", []string{"lint", "--format", "flat"}, 2, "lint-flat.txt", ""},
+		{"schema-errors", []string{"lint", "--format=flat"}, 2, "lint-flat.txt", ""},
+		{"warnings", []string{"lint", "--strict", "--format", "flat"}, 1, "lint-flat.txt", ""},
+		{"team", []string{"lint", "--format", "flat"}, 0, "lint-flat.txt", ""},
+		{"ensek", []string{"lint", "--format", "flat"}, 0, "lint-flat.txt", ""},
+		{"ensek", []string{"--now", "2026-11-01", "lint", "--format", "flat"}, 0, "lint-2026-11-01-flat.txt", ""},
 		{"team", []string{"prep", "sam"}, 0, "prep-sam.md", ""},
 		{"team", []string{"prep", "Samuel"}, 0, "prep-sam.md", ""},
 		{"team", []string{"prep", "PRIYA"}, 0, "prep-priya.md", ""},
@@ -432,10 +439,10 @@ func TestEnsekGoldenFacts(t *testing.T) {
 		return string(b)
 	}
 	okr := regexp.MustCompile(`(?m)^.*okr-no-evidence.*$`)
-	if got := okr.FindAllString(read("lint.txt"), -1); len(got) != 0 {
+	if got := okr.FindAllString(read("lint-flat.txt"), -1); len(got) != 0 {
 		t.Errorf("lint at 2026-10-21 has okr-no-evidence: %q", got)
 	}
-	got := okr.FindAllString(read("lint-2026-11-01.txt"), -1)
+	got := okr.FindAllString(read("lint-2026-11-01-flat.txt"), -1)
 	if len(got) != 1 || !strings.HasPrefix(got[0], "resources/okrs.yaml:1: warning okr-no-evidence [sam]: ") ||
 		!strings.Contains(got[0], "scope.crossteam") {
 		t.Errorf("lint at 2026-11-01: okr-no-evidence lines = %q, want one for scope.crossteam", got)
@@ -506,7 +513,7 @@ func TestExtensionsNeedNoRebuild(t *testing.T) {
 	if err := os.WriteFile(cue, []byte(strings.Replace(string(b), "person: string", `person: "priya"`, 1)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if out, _, code := run("lint"); code != 2 || !strings.Contains(out, "resources/okrs.yaml:1: error schema-invalid") {
+	if out, _, code := run("lint", "--format", "flat"); code != 2 || !strings.Contains(out, "resources/okrs.yaml:1: error schema-invalid") {
 		t.Errorf("tightened schema: exit %d\n%s", code, out)
 	}
 	if err := os.WriteFile(cue, b, 0o644); err != nil {
@@ -554,12 +561,85 @@ func TestReportUsage(t *testing.T) {
 // TestLintTextWithoutLocation: Conftest-style string findings carry no file
 // and print without a location rather than as ":0:".
 func TestLintTextWithoutLocation(t *testing.T) {
-	got := lintText(
+	got := lintFlat(
 		[]facts.Finding{{Severity: "error", ID: "acme", Message: "OKRs must name a cycle"}},
 		[]facts.Finding{{Severity: "warning", ID: "odd", File: "resources/x.yaml", Message: "m"}},
 	)
 	want := "error acme: OKRs must name a cycle\nresources/x.yaml: warning odd: m\n1 error, 1 warning\n"
 	if got != want {
 		t.Errorf("got %q\nwant %q", got, want)
+	}
+}
+
+func TestLintGrouped(t *testing.T) {
+	names := map[string]string{"jo": "Jo Kim", "sam": "Sam Lee"}
+	errs := []facts.Finding{
+		{Severity: "error", ID: "token-unknown", Person: "sam", File: "notes/b.md", Line: 3, Message: "unknown token +plannig", Suggest: "planning"},
+		{Severity: "error", ID: "acme", Message: "OKRs must name a cycle"},
+		{Severity: "error", ID: "token-unknown", Person: "jo", File: "notes/a.md", Line: 7, Message: "jo: unknown token +x"},
+	}
+	warns := []facts.Finding{
+		{Severity: "warning", ID: "gap-unaddressed", Person: "sam", File: "resources/people.yaml", Line: 1, Message: "sam: gap x (unproven) has no open action"},
+		{Severity: "warning", ID: "action-no-due", Person: "sam", File: "notes/b.md", Line: 9, Message: "action \"b\" has no due date"},
+		{Severity: "warning", ID: "action-no-due", Person: "sam", File: "notes/a.md", Line: 12, Message: "action \"a\" has no due date"},
+		{Severity: "warning", ID: "odd", File: "resources/x.yaml", Message: "no line"},
+		{Severity: "warning", ID: "acme-note", Message: "plain string"},
+		{Severity: "warning", ID: "custom", Person: "ghost", File: "notes/c.md", Line: 1, Message: "ghost: unnamed"},
+		{Severity: "warning", ID: "oneonone-overdue", Person: "jo", File: "resources/people.yaml", Line: 26, Message: "no 1:1 section for jo at all"},
+	}
+	got := lintGrouped("2026-10-21", names, errs, warns)
+	want := `# Lint — 2026-10-21
+
+3 errors, 7 warnings
+
+## Errors
+
+- **acme**
+  - OKRs must name a cycle
+- **token-unknown**
+  - jo: unknown token +x (notes/a.md:7)
+  - sam: unknown token +plannig (did you mean "planning"?) (notes/b.md:3)
+
+## ghost
+
+- **custom**
+  - unnamed (notes/c.md:1)
+
+## Jo Kim (jo)
+
+- **oneonone-overdue**
+  - no 1:1 section for jo at all (resources/people.yaml:26)
+
+## Sam Lee (sam)
+
+- **action-no-due**
+  - action "a" has no due date (notes/a.md:12)
+  - action "b" has no due date (notes/b.md:9)
+- **gap-unaddressed**
+  - gap x (unproven) has no open action (resources/people.yaml:1)
+
+## Workspace
+
+- **acme-note**
+  - plain string
+- **odd**
+  - no line (resources/x.yaml)
+`
+	if got != want {
+		t.Errorf("got:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestLintGroupedNoProblems(t *testing.T) {
+	if got, want := lintGrouped("2026-10-21", nil, nil, nil), "# Lint — 2026-10-21\n\nno problems\n"; got != want {
+		t.Errorf("got %q, want %q", got, want)
+	}
+}
+
+func TestLintGroupedErrorsOnly(t *testing.T) {
+	got := lintGrouped("2026-10-21", nil, []facts.Finding{{Severity: "error", ID: "e", Person: "sam", File: "f.md", Line: 1, Message: "sam: m"}}, nil)
+	want := "# Lint — 2026-10-21\n\n1 error, 0 warnings\n\n## Errors\n\n- **e**\n  - sam: m (f.md:1)\n"
+	if got != want {
+		t.Errorf("got %q, want %q", got, want)
 	}
 }

@@ -60,7 +60,7 @@ func TestInitExamplePolicyIsLive(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(root, "notes", "2026-10-20.md"), []byte(b.String()), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	_, out, _ = runCLI(t, root, "--now", "2026-10-21", "lint")
+	_, out, _ = runCLI(t, root, "--now", "2026-10-21", "lint", "--format", "flat")
 	if !strings.Contains(out, "warning example-me-backlog [robin]: robin: you owe them 12 open actions (more than 10)") {
 		t.Errorf("example policy did not fire:\n%s", out)
 	}

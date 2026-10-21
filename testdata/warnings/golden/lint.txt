@@ -1,17 +1,40 @@
-notes/2026-W42.md:4: warning negative-unaddressed [sam]: negative collab.planning mark for sam on 2026-10-12 has no ~collab.planning action dated on or after it
-notes/2026-W42.md:6: warning action-overdue [sam]: action "book the team workshop" was due 2026-10-16
-notes/2026-W42.md:7: warning action-no-due [sam]: action "send the L4 section" has no due date
-notes/2026-W42.md:9: warning action-duplicate [sam]: open action "share the roadmap doc" appears 2 times
-notes/2026-W43.md:6: warning action-duplicate [sam]: open action "Share the roadmap doc" appears 2 times
-notes/2026-W43.md:8: warning section-unmarked [priya]: priya's section on 2026-10-19 has no tokens
-resources/cycle.yaml:1: warning cycle-evidence-thin [jo]: jo: gaps remain (collab.planning, delivery.ownership, scope.crossteam) and manager-draft for autumn is due 2026-11-01
-resources/cycle.yaml:1: warning cycle-evidence-thin [sam]: sam: gaps remain (collab.planning, scope.crossteam) and manager-draft for autumn is due 2026-11-01
-resources/cycle.yaml:1: warning cycle-input-missing [jo]: jo: input self-assessment not recorded for cycle autumn (0 received); peer-nominations is due 2026-10-27
-resources/cycle.yaml:1: warning cycle-input-missing [priya]: priya: input self-assessment not recorded for cycle autumn (0 received); peer-nominations is due 2026-10-27
-resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap collab.planning (disproven) has no open action addressing it
-resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap scope.crossteam (unproven) has no open action addressing it
-resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency collab.planning never touched; nothing in the last 42 days
-resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency delivery.ownership never touched; nothing in the last 42 days
-resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency scope.crossteam never touched; nothing in the last 42 days
-resources/people.yaml:24: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
+# Lint — 2026-10-21
+
 0 errors, 16 warnings
+
+## jo
+
+- **competency-untouched**
+  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:24)
+- **cycle-evidence-thin**
+  - gaps remain (collab.planning, delivery.ownership, scope.crossteam) and manager-draft for autumn is due 2026-11-01 (resources/cycle.yaml:1)
+- **cycle-input-missing**
+  - input self-assessment not recorded for cycle autumn (0 received); peer-nominations is due 2026-10-27 (resources/cycle.yaml:1)
+- **oneonone-overdue**
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:24)
+
+## priya
+
+- **cycle-input-missing**
+  - input self-assessment not recorded for cycle autumn (0 received); peer-nominations is due 2026-10-27 (resources/cycle.yaml:1)
+- **section-unmarked**
+  - priya's section on 2026-10-19 has no tokens (notes/2026-W43.md:8)
+
+## sam
+
+- **action-duplicate**
+  - open action "share the roadmap doc" appears 2 times (notes/2026-W42.md:9)
+  - open action "Share the roadmap doc" appears 2 times (notes/2026-W43.md:6)
+- **action-no-due**
+  - action "send the L4 section" has no due date (notes/2026-W42.md:7)
+- **action-overdue**
+  - action "book the team workshop" was due 2026-10-16 (notes/2026-W42.md:6)
+- **cycle-evidence-thin**
+  - gaps remain (collab.planning, scope.crossteam) and manager-draft for autumn is due 2026-11-01 (resources/cycle.yaml:1)
+- **gap-unaddressed**
+  - gap collab.planning (disproven) has no open action addressing it (resources/people.yaml:1)
+  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:1)
+- **negative-unaddressed**
+  - negative collab.planning mark for sam on 2026-10-12 has no ~collab.planning action dated on or after it (notes/2026-W42.md:4)

@@ -27,7 +27,8 @@ const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
 commands:
   init                                 scaffold a new workspace here (never overwrites)
   facts                                print the facts document as JSON
-  lint [--strict] [--format text|json] print errors and warnings
+  lint [--strict] [--format text|flat|json]
+                                       print errors and warnings
   prep <person> [--cycle NAME]         print the 1:1 prep sheet
   review <person> [--cycle NAME]       print the review evidence pack
   explain <person> <competency> [--cycle NAME]
@@ -167,21 +168,24 @@ func runLint(args []string, root, now string, stdout, stderr io.Writer) int {
 	if fl.NArg() != 0 {
 		return usageError(stderr, "lint takes no arguments")
 	}
-	if *format != "text" && *format != "json" {
+	if *format != "text" && *format != "flat" && *format != "json" {
 		return usageError(stderr, fmt.Sprintf("lint: unknown format %q", *format))
 	}
 	res, ok := pipeline(root, now, stderr)
 	if !ok {
 		return 2
 	}
-	if *format == "json" {
+	switch *format {
+	case "json":
 		doc := map[string][]facts.Finding{"errors": res.Errors, "warnings": res.Warnings}
 		if err := writeJSON(stdout, doc); err != nil {
 			fmt.Fprintf(stderr, "mgmt: %v\n", err)
 			return 2
 		}
-	} else {
-		_, _ = io.WriteString(stdout, lintText(res.Errors, res.Warnings))
+	case "flat":
+		_, _ = io.WriteString(stdout, lintFlat(res.Errors, res.Warnings))
+	default:
+		_, _ = io.WriteString(stdout, lintGrouped(now, personNames(res.Facts), res.Errors, res.Warnings))
 	}
 	switch {
 	case len(res.Errors) > 0:
@@ -284,8 +288,8 @@ func parseReportArgs(name string, args []string, stderr io.Writer) (pos []string
 	return pos, *c, 0
 }
 
-// renderReport runs the pipeline, refuses on errors (the lint text goes to
-// stderr), resolves pos[0] as the person and pos[1] as a competency of
+// renderReport runs the pipeline, refuses on errors (the grouped lint text
+// goes to stderr), resolves pos[0] as the person and pos[1] as a competency of
 // theirs, and renders view name with template tmpl. strict makes a missing
 // view an error.
 func renderReport(name, tmpl string, pos []string, cycle string, strict bool, root, now string, stdout, stderr io.Writer) int {
@@ -296,7 +300,7 @@ func renderReport(name, tmpl string, pos []string, cycle string, strict bool, ro
 		return 2
 	}
 	if len(res.Errors) > 0 {
-		_, _ = io.WriteString(stderr, lintText(res.Errors, res.Warnings))
+		_, _ = io.WriteString(stderr, lintGrouped(now, personNames(res.Facts), res.Errors, res.Warnings))
 		return 2
 	}
 	if _, ok := res.Facts.Resources["ReviewCycle"][opts.Cycle]; opts.Cycle != "" && !ok {
@@ -475,52 +479,6 @@ func plainJSON(v any) (any, error) {
 	var out any
 	err = dec.Decode(&out)
 	return out, err
-}
-
-// lintText renders findings one per line, errors and warnings interleaved in
-// file, line, id, person order, followed by a summary line. A finding with no
-// file (a workspace policy emitting a plain string) prints without a
-// location, as "warning <pkg>: <message>" (Ruling R17: the one accepted
-// exception to every finding carrying file:line); one with a file but no line
-// prints "<file>: ...".
-func lintText(errs, warns []facts.Finding) string {
-	if len(errs)+len(warns) == 0 {
-		return "no problems\n"
-	}
-	all := append(append([]facts.Finding{}, errs...), warns...)
-	engine.SortFindings(all)
-	var b strings.Builder
-	for _, f := range all {
-		switch {
-		case f.File == "":
-		case f.Line == 0:
-			fmt.Fprintf(&b, "%s: ", f.File)
-		default:
-			fmt.Fprintf(&b, "%s:%d: ", f.File, f.Line)
-		}
-		fmt.Fprintf(&b, "%s %s", f.Severity, f.ID)
-		if f.Person != "" {
-			fmt.Fprintf(&b, " [%s]", f.Person)
-		}
-		fmt.Fprintf(&b, ": %s", f.Message)
-		if f.Suggest != "" {
-			fmt.Fprintf(&b, " (did you mean %q?)", f.Suggest)
-		}
-		b.WriteByte('\n')
-	}
-	b.WriteString(summary(len(errs), len(warns)) + "\n")
-	return b.String()
-}
-
-func summary(errs, warns int) string {
-	return plural(errs, "error") + ", " + plural(warns, "warning")
-}
-
-func plural(n int, word string) string {
-	if n == 1 {
-		return "1 " + word
-	}
-	return fmt.Sprintf("%d %ss", n, word)
 }
 
 // writeJSON writes v as 2-space indented JSON with sorted keys and a

@@ -1,37 +1,84 @@
-notes/2026-W43.md:5: error token-unknown: unknown competency token "plannig" (did you mean "planning"?)
-notes/2026-W43.md:6: error person-unknown: unknown person "samm" (did you mean "sam"?)
-notes/2026-W43.md:7: warning action-no-due [sam]: action "write up the incident" has no due date
-notes/2026-W43.md:7: error evidence-in-action: evidence token "+ownership" on an action; evidence belongs on its own line (use ~ to say what the action addresses)
-notes/2026-W43.md:8: error input-unknown: unknown input "self-asessment" for sam on 2026-10-19: no review cycle selecting them declares it for that date (did you mean "self-assessment"?)
-notes/2026-W43.md:9: error line-multi-person: line names two people: "sam" and "priya"
-notes/2026-W43.md:12: error heading-multi-person: heading names several people (priya, sam); put @person on the line to say whose +ownership is
-notes/2026-W43.md:15: error person-missing: +crossteam has no person: no @person on the line and no person heading above it
-notes/misc.md:1: error date-unresolved: no date in the file name or its first-level heading
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [priya]: priya: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [priya]: priya: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [priya]: priya: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
-resources/framework.yaml:1: error token-duplicate: token "plan" is claimed by collab.planning, scope.crossteam
-resources/people.yaml:1: warning competency-untouched [sam]: sam: required competency collab.planning never touched; nothing in the last 42 days
-resources/people.yaml:1: warning competency-untouched [sam]: sam: required competency scope.crossteam never touched; nothing in the last 42 days
-resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap collab.planning (unproven) has no open action addressing it
-resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap delivery.ownership (unproven) has no open action addressing it
-resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap scope.crossteam (unproven) has no open action addressing it
-resources/people.yaml:12: warning competency-untouched [priya]: priya: required competency delivery.ownership never touched; nothing in the last 42 days
-resources/people.yaml:12: warning gap-unaddressed [priya]: priya: gap delivery.ownership (unproven) has no open action addressing it
-resources/people.yaml:12: warning oneonone-overdue [priya]: no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d)
-resources/people.yaml:23: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
-resources/people.yaml:23: error ref-unknown [jo]: person "jo": unknown level "L9" for role "platform-engineer"
-resources/people.yaml:34: warning competency-untouched [alex]: alex: required competency delivery.ownership never touched; nothing in the last 42 days
-resources/people.yaml:34: warning gap-unaddressed [alex]: alex: gap delivery.ownership (unproven) has no open action addressing it
-resources/people.yaml:34: warning oneonone-overdue [alex]: no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d)
-resources/people.yaml:45: error alias-duplicate [alexander]: name or alias "alex" is shared by alex, alexander
-resources/people.yaml:45: warning competency-untouched [alexander]: alexander: required competency delivery.ownership never touched; nothing in the last 42 days
-resources/people.yaml:45: warning gap-unaddressed [alexander]: alexander: gap delivery.ownership (unproven) has no open action addressing it
-resources/people.yaml:45: warning oneonone-overdue [alexander]: no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d)
+# Lint — 2026-10-21
+
 11 errors, 25 warnings
+
+## Errors
+
+- **alias-duplicate**
+  - alexander: name or alias "alex" is shared by alex, alexander (resources/people.yaml:45)
+- **date-unresolved**
+  - no date in the file name or its first-level heading (notes/misc.md:1)
+- **evidence-in-action**
+  - evidence token "+ownership" on an action; evidence belongs on its own line (use ~ to say what the action addresses) (notes/2026-W43.md:7)
+- **heading-multi-person**
+  - heading names several people (priya, sam); put @person on the line to say whose +ownership is (notes/2026-W43.md:12)
+- **input-unknown**
+  - unknown input "self-asessment" for sam on 2026-10-19: no review cycle selecting them declares it for that date (did you mean "self-assessment"?) (notes/2026-W43.md:8)
+- **line-multi-person**
+  - line names two people: "sam" and "priya" (notes/2026-W43.md:9)
+- **person-missing**
+  - +crossteam has no person: no @person on the line and no person heading above it (notes/2026-W43.md:15)
+- **person-unknown**
+  - unknown person "samm" (did you mean "sam"?) (notes/2026-W43.md:6)
+- **ref-unknown**
+  - jo: person "jo": unknown level "L9" for role "platform-engineer" (resources/people.yaml:23)
+- **token-duplicate**
+  - token "plan" is claimed by collab.planning, scope.crossteam (resources/framework.yaml:1)
+- **token-unknown**
+  - unknown competency token "plannig" (did you mean "planning"?) (notes/2026-W43.md:5)
+
+## alex
+
+- **competency-untouched**
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:34)
+- **gap-unaddressed**
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:34)
+- **oneonone-overdue**
+  - no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:34)
+
+## alexander
+
+- **competency-untouched**
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:45)
+- **gap-unaddressed**
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:45)
+- **oneonone-overdue**
+  - no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:45)
+
+## jo
+
+- **cycle-input-missing**
+  - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+- **oneonone-overdue**
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:23)
+
+## priya
+
+- **competency-untouched**
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:12)
+- **cycle-input-missing**
+  - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+- **gap-unaddressed**
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:12)
+- **oneonone-overdue**
+  - no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:12)
+
+## sam
+
+- **action-no-due**
+  - action "write up the incident" has no due date (notes/2026-W43.md:7)
+- **competency-untouched**
+  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:1)
+  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:1)
+- **cycle-input-missing**
+  - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+  - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
+- **gap-unaddressed**
+  - gap collab.planning (unproven) has no open action addressing it (resources/people.yaml:1)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:1)
+  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:1)
