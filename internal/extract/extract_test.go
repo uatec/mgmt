@@ -241,3 +241,14 @@ func TestOneOnOneMonthNamedPerson(t *testing.T) {
 		t.Errorf("sections = %+v", got.Sections)
 	}
 }
+
+func TestAttributedLineDoesNotCountForSection(t *testing.T) {
+	got := extractOne(t, "notes/2026-W43.md", "# 2026-W43\n\n## 1:1 Sam\n- @priya +crossteam unblocked the handover\n")
+	if len(got.Evidence) != 1 || got.Evidence[0].Person != "priya" {
+		t.Errorf("evidence = %+v", got.Evidence)
+	}
+	want := []facts.Section{{Person: "sam", Date: "2026-10-19", File: "notes/2026-W43.md", Line: 3, TokenCount: 0}}
+	if !reflect.DeepEqual(got.Sections, want) {
+		t.Errorf("sections = %+v, want %+v", got.Sections, want)
+	}
+}

@@ -371,7 +371,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			ID: fmt.Sprintf("%x", sha1.Sum([]byte(x.file+txt))), Person: person, Owner: owner, Due: due,
 			Done: done, Addresses: addresses, Date: date, File: x.file, Line: lineNo, Text: txt,
 		})
-		x.count()
+		x.count(person)
 	}
 
 	for _, t := range toks {
@@ -388,7 +388,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 				x.out.Evidence = append(x.out.Evidence, facts.Evidence{
 					Person: person, Competency: id, Polarity: pol, Date: date, File: x.file, Line: lineNo, Text: txt,
 				})
-				x.count()
+				x.count(person)
 			}
 		case '~':
 			if isAction {
@@ -398,7 +398,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 				x.out.Touches = append(x.out.Touches, facts.Touch{
 					Person: person, Competency: id, Date: date, File: x.file, Line: lineNo, Text: txt,
 				})
-				x.count()
+				x.count(person)
 			}
 		case '!':
 			cycle, name, ok := x.idx.Cycle(person, t.Body, date)
@@ -414,7 +414,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			x.out.Inputs = append(x.out.Inputs, facts.Input{
 				Person: person, Input: name, Cycle: cycle, Date: date, File: x.file, Line: lineNo,
 			})
-			x.count()
+			x.count(person)
 		}
 	}
 }
@@ -433,11 +433,15 @@ func (x *extractor) competency(person, token string, line int) (string, bool) {
 	return "", false
 }
 
-// count adds one record to the innermost person section.
-func (x *extractor) count() {
+// count adds one record about person to the innermost person section, but
+// only when that section is person's: an @-attributed line inside someone
+// else's 1:1 does not mark that 1:1.
+func (x *extractor) count(person string) {
 	for i := len(x.stack) - 1; i >= 0; i-- {
 		if s := x.stack[i].section; s >= 0 {
-			x.out.Sections[s].TokenCount++
+			if x.out.Sections[s].Person == person {
+				x.out.Sections[s].TokenCount++
+			}
 			return
 		}
 	}
