@@ -255,3 +255,26 @@ func TestLoadNotesHomeUnresolvable(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestLoadNotesParentRelativeGlob(t *testing.T) {
+	tmp := t.TempDir()
+	root := filepath.Join(tmp, "ws")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeNote(t, filepath.Join(tmp, "journal", "2026-10-21.md"), "j")
+	writeNote(t, filepath.Join(root, "notes", "2026-W43.md"), "n")
+	notes, err := LoadNotes(root, "../journal/**/*.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := filepath.ToSlash(tmp) + "/journal/2026-10-21.md"
+	if got := notePaths(notes); len(got) != 1 || got[0] != want {
+		t.Errorf("paths = %v, want [%s]", got, want)
+	}
+	// ".." that stays inside the root yields root-relative paths.
+	notes, err = LoadNotes(root, "notes/../notes/*.md")
+	if err != nil || len(notes) != 1 || notes[0].Path != "notes/2026-W43.md" {
+		t.Errorf("inside = %v, %v", notePaths(notes), err)
+	}
+}

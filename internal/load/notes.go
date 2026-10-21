@@ -31,16 +31,23 @@ func LoadNotes(root, glob string) ([]NoteFile, error) {
 		}
 		glob = filepath.ToSlash(home) + glob[1:]
 	}
+	absRoot, err := filepath.Abs(root)
+	if err != nil {
+		return nil, err
+	}
+	// os.DirFS rejects "..", so resolve such globs against the root first.
+	for _, seg := range strings.Split(filepath.ToSlash(glob), "/") {
+		if seg == ".." && !filepath.IsAbs(glob) {
+			glob = filepath.ToSlash(filepath.Join(absRoot, filepath.FromSlash(glob)))
+			break
+		}
+	}
 	base, pattern, rooted := root, glob, false
 	if strings.HasPrefix(glob, "/") || filepath.IsAbs(glob) {
 		base, pattern = doublestar.SplitPattern(filepath.ToSlash(glob))
 		rooted = true
 	}
 	matches, err := doublestar.Glob(os.DirFS(base), pattern)
-	if err != nil {
-		return nil, err
-	}
-	absRoot, err := filepath.Abs(root)
 	if err != nil {
 		return nil, err
 	}

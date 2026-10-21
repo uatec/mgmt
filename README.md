@@ -80,7 +80,9 @@ journal in place, for example an Obsidian vault:
 
 Globs starting with `~/` expand to your home directory, and absolute globs
 (`/home/me/Vault/Journal/**/*.md`) work too. Files outside the workspace show
-up in `file:line` references with their absolute path. mgmt only reads them.
+up in `file:line` references with their absolute path. mgmt only reads them. Relative globs may use `..` (`../journal/**/*.md`).
+The folder part of the glob must not contain glob characters (`[ ] { } * ?`),
+so a vault called `Work [2026]` needs a symlink or a renamed folder.
 
 **CompetencyFramework**: the competencies, the short tokens you write in notes,
 and what each role expects at each level. A level inherits its lower level's
