@@ -59,6 +59,10 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"explain", "jo", "PLANNING"}, 0, "explain-jo-planning.md", ""},
 		{"team", []string{"explain", "sam", "plannig"}, 2, "", "explain-plannig.stderr"},
 		{"team", []string{"explain", "sam", "zzzzzz"}, 2, "", "explain-zzzzzz.stderr"},
+		{"team", []string{"status"}, 0, "status.md", ""},
+		{"team", []string{"status", "--cycle", "retro-2026-h1"}, 0, "status-retro.md", ""},
+		{"team", []string{"status", "--cycle", "nope"}, 2, "", "status-nope.stderr"},
+		{"spec-example", []string{"status"}, 0, "status.md", ""},
 	}
 	for _, r := range rows {
 		t.Run(r.fixture+"/"+strings.Join(r.args, "_"), func(t *testing.T) {
@@ -205,6 +209,7 @@ func TestUsageErrors(t *testing.T) {
 		{"review", "sam", "extra"},
 		{"explain", "sam"},
 		{"explain", "sam", "planning", "extra"},
+		{"status", "sam"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := Run(args, root, &stdout, &stderr); code != 2 {

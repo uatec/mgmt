@@ -30,6 +30,7 @@ commands:
   review <person> [--cycle NAME]       print the review evidence pack
   explain <person> <competency> [--cycle NAME]
                                        explain why a competency has its status
+  status [--cycle NAME]                print the team matrix and cycle conditions
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
@@ -62,6 +63,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runReport("review", rest[1:], "<person>", root, *now, &buf, stderr)
 	case "explain":
 		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
+	case "status":
+		code = runReport("status", rest[1:], "", root, *now, &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}
@@ -151,7 +154,8 @@ func runLint(args []string, root, now string, stdout, stderr io.Writer) int {
 
 // runReport parses "<args> [--cycle NAME]" (flags may come anywhere), runs
 // the pipeline, refuses on errors (the lint text goes to stderr), resolves
-// the person and, for explain, the competency, and renders the report.
+// the person (not for status) and, for explain, the competency, and renders
+// the report.
 func runReport(name string, args []string, argUsage, root, now string, stdout, stderr io.Writer) int {
 	fl := flag.NewFlagSet(name, flag.ContinueOnError)
 	fl.SetOutput(io.Discard)
@@ -177,18 +181,21 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		fmt.Fprintf(stderr, "mgmt: unknown cycle %q\n", opts.Cycle)
 		return 2
 	}
-	person, ok := resolvePerson(res.Facts, pos[0])
-	if !ok {
-		fmt.Fprintf(stderr, "mgmt: unknown person %q\n", pos[0])
-		return 2
+	var keys []string // status takes no person: its view is unkeyed (Ruling R4)
+	if len(pos) > 0 {
+		person, ok := resolvePerson(res.Facts, pos[0])
+		if !ok {
+			fmt.Fprintf(stderr, "mgmt: unknown person %q\n", pos[0])
+			return 2
+		}
+		if opts.Cycle != "" && !inCycle(res.Derive, opts.Cycle, person) {
+			fmt.Fprintf(stderr, "mgmt: %s is not in cycle %q\n", person, opts.Cycle)
+			return 2
+		}
+		keys = []string{person}
 	}
-	if opts.Cycle != "" && !inCycle(res.Derive, opts.Cycle, person) {
-		fmt.Fprintf(stderr, "mgmt: %s is not in cycle %q\n", person, opts.Cycle)
-		return 2
-	}
-	keys := []string{person}
 	if len(pos) == 2 {
-		id, suggest, ok := resolveCompetency(res.Facts, person, pos[1])
+		id, suggest, ok := resolveCompetency(res.Facts, keys[0], pos[1])
 		if !ok {
 			fmt.Fprintf(stderr, "mgmt: unknown competency %q", pos[1])
 			if suggest != "" {

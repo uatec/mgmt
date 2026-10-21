@@ -197,3 +197,78 @@ _decides(d, m) := true if {
 	d.file == m.file
 	d.line == m.line
 } else := false
+
+# --- status ---------------------------------------------------------------
+
+# The team matrix (every Person, by name; "" where a competency is not
+# required) and, per active cycle, the status conditions over the people the
+# cycle selects. Not keyed by person.
+status := {
+	"competencies": _status_competencies,
+	"rows": [{"person": p, "cells": [{"competency": c, "status": _cell(p, c)} | some c in _status_competencies]} |
+		some p in sort(object.keys(_persons))
+	],
+	"cycles": [{"name": cy, "conditions": _conditions(cy)} | some cy in derive.active_cycles],
+}
+
+_status_competencies := sort({c | some cs in derive.required; some c in cs})
+
+_cell(p, c) := object.get(derive.status, [p, c, "status"], "unproven") if c in object.get(derive.required, p, [])
+
+_cell(p, c) := "" if not c in object.get(derive.required, p, [])
+
+_conditions(cy) := [_evidence_condition(cy), _inputs_condition(cy), _actions_condition(cy)]
+
+_plural(1, one, _) := sprintf("1 %s", [one])
+
+_plural(n, _, many) := sprintf("%d %s", [n, many]) if n != 1
+
+_people(n) := _plural(n, "person", "people")
+
+_cycle_people(cy) := object.get(derive.cycle_people, cy, [])
+
+_evidence_condition(cy) := {"type": "EvidenceComplete", "status": "True", "reason": "NoGaps", "message": sprintf("no gaps for %s", [_people(count(_cycle_people(cy)))])} if {
+	count(_gap_people(cy)) == 0
+}
+
+_evidence_condition(cy) := {
+	"type": "EvidenceComplete", "status": "False", "reason": "GapsRemain",
+	"message": sprintf("%s across %s", [_plural(sum([count(object.get(derive.gaps, p, [])) | some p in _gap_people(cy)]), "gap", "gaps"), _people(count(_gap_people(cy)))]),
+} if {
+	count(_gap_people(cy)) > 0
+}
+
+_gap_people(cy) := {p | some p in _cycle_people(cy); count(object.get(derive.gaps, p, [])) > 0}
+
+_missing(cy, p) := count([i | some i in object.get(derive.inputs, [cy, p], []); not i.complete])
+
+_inputs_people(cy) := {p | some p in _cycle_people(cy); _missing(cy, p) > 0}
+
+_inputs_condition(cy) := {"type": "InputsComplete", "status": "True", "reason": "AllInputsReceived", "message": "all inputs received"} if {
+	count(_inputs_people(cy)) == 0
+}
+
+_inputs_condition(cy) := {
+	"type": "InputsComplete", "status": "False", "reason": "InputsMissing",
+	"message": sprintf("%s missing across %s", [_plural(sum([_missing(cy, p) | some p in _inputs_people(cy)]), "input", "inputs"), _people(count(_inputs_people(cy)))]),
+} if {
+	count(_inputs_people(cy)) > 0
+}
+
+_overdue_actions(cy) := [a |
+	some a in object.get(input, "actions", [])
+	a.person in _cycle_people(cy)
+	not a.done
+	_overdue(a.due)
+]
+
+_actions_condition(cy) := {"type": "ActionsCurrent", "status": "True", "reason": "NoOverdueActions", "message": "no overdue actions"} if {
+	count(_overdue_actions(cy)) == 0
+}
+
+_actions_condition(cy) := {
+	"type": "ActionsCurrent", "status": "False", "reason": "ActionsOverdue",
+	"message": sprintf("%s overdue", [_plural(count(_overdue_actions(cy)), "open action", "open actions")]),
+} if {
+	count(_overdue_actions(cy)) > 0
+}

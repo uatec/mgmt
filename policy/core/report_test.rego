@@ -353,3 +353,118 @@ test_explain_not_required_and_empty if {
 	e.considered == []
 	e.outside == []
 }
+
+# --- status ---------------------------------------------------------------
+
+priya := json.patch(sam, [
+	{"op": "replace", "path": "/metadata/name", "value": "priya"},
+	{"op": "replace", "path": "/spec/level", "value": "L2"},
+])
+
+two_people := json.patch(doc({"sam": sam, "priya": priya}, {"ensek-2026-h2": h2}), [
+	{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/selector/people", "value": ["sam", "priya"]},
+])
+
+cond(s, t) := [c | some c in s.cycles[0].conditions; c.type == t][0]
+
+test_status_matrix if {
+	s := report.status with input as two_people
+	s.competencies == ["collab.planning", "delivery.ownership", "scope.crossteam"]
+	[r.person | some r in s.rows] == ["priya", "sam"]
+	[c.status | some c in s.rows[0].cells] == ["", "unproven", ""]
+	[c.competency | some c in s.rows[0].cells] == ["collab.planning", "delivery.ownership", "scope.crossteam"]
+	[c.status | some c in s.rows[1].cells] == ["unproven", "unproven", "unproven"]
+}
+
+test_status_missing_framework_row_is_blank if {
+	broken := json.patch(two_people, [{"op": "replace", "path": "/resources/Person/priya/spec/framework", "value": "nope"}])
+	s := report.status with input as broken
+	[c.status | some c in s.rows[0].cells] == ["", "", ""]
+	s.rows[0].person == "priya"
+}
+
+test_status_condition_order if {
+	s := report.status with input as base
+	[c.type | some c in s.cycles[0].conditions] == ["EvidenceComplete", "InputsComplete", "ActionsCurrent"]
+	s.cycles[0].name == "ensek-2026-h2"
+}
+
+test_status_evidence_gaps_remain_plural if {
+	s := report.status with input as two_people
+	c := cond(s, "EvidenceComplete")
+	c == {"type": "EvidenceComplete", "status": "False", "reason": "GapsRemain", "message": "4 gaps across 2 people"}
+}
+
+test_status_evidence_gaps_remain_singular if {
+	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	s := report.status with input as one
+	c := cond(s, "EvidenceComplete")
+	c.message == "1 gap across 1 person"
+}
+
+test_status_evidence_no_gaps if {
+	marks := [object.union(mark(1, "2026-09-01", "notes/a.md", 1), {"competency": "delivery.ownership"})]
+	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	s := report.status with input as l2
+	c := cond(s, "EvidenceComplete")
+	c == {"type": "EvidenceComplete", "status": "True", "reason": "NoGaps", "message": "no gaps for 1 person"}
+}
+
+test_status_inputs_missing if {
+	s := report.status with input as two_people
+	c := cond(s, "InputsComplete")
+	c == {"type": "InputsComplete", "status": "False", "reason": "InputsMissing", "message": "6 inputs missing across 2 people"}
+}
+
+test_status_inputs_missing_singular if {
+	s := report.status with input as base
+	c := cond(s, "InputsComplete")
+	c.message == "3 inputs missing across 1 person"
+}
+
+test_status_inputs_all_received if {
+	no_inputs := json.patch(base, [{"op": "remove", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/inputs"}])
+	s := report.status with input as no_inputs
+	c := cond(s, "InputsComplete")
+	c == {"type": "InputsComplete", "status": "True", "reason": "AllInputsReceived", "message": "all inputs received"}
+}
+
+test_status_actions_overdue if {
+	acts := [
+		action("me", "2026-10-20", "notes/a.md", 1, false),
+		action("sam", "2026-10-01", "notes/a.md", 2, false),
+		action("me", "2026-10-21", "notes/a.md", 3, false), # due today
+		action("me", "", "notes/a.md", 4, false), # undated
+		action("me", "2026-10-01", "notes/a.md", 5, true), # done
+	]
+	s := report.status with input as with_records("actions", acts)
+	c := cond(s, "ActionsCurrent")
+	c == {"type": "ActionsCurrent", "status": "False", "reason": "ActionsOverdue", "message": "2 open actions overdue"}
+}
+
+test_status_actions_overdue_singular if {
+	acts := [action("me", "2026-10-20", "notes/a.md", 1, false)]
+	s := report.status with input as with_records("actions", acts)
+	c := cond(s, "ActionsCurrent")
+	c.message == "1 open action overdue"
+}
+
+test_status_actions_current if {
+	s := report.status with input as base
+	c := cond(s, "ActionsCurrent")
+	c == {"type": "ActionsCurrent", "status": "True", "reason": "NoOverdueActions", "message": "no overdue actions"}
+}
+
+test_status_only_cycle_people_counted if {
+	acts := [json.patch(action("me", "2026-10-20", "notes/a.md", 1, false), [{"op": "replace", "path": "/person", "value": "priya"}])]
+	facts := json.patch(with_records("actions", acts), [{"op": "add", "path": "/resources/Person/priya", "value": priya}])
+	s := report.status with input as facts
+	c := cond(s, "ActionsCurrent")
+	c.status == "True"
+}
+
+test_status_no_active_cycle if {
+	s := report.status with input as doc({"sam": sam}, {})
+	s.cycles == []
+	count(s.rows) == 1
+}
