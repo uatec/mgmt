@@ -22,11 +22,15 @@ type Resource struct {
 	Kind       string
 	Name       string
 	Object     map[string]any
-	File       string // relative to the workspace root, slash-separated
-	Line       int    // 1-based line of the document's first line
+	File       string   // relative to the workspace root, slash-separated
+	Line       int      // 1-based line of the document's first line
+	Ignores    []string // ids from "# mgmt:ignore id[,id]" comments in the document, sorted
 }
 
-var timestampRE = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T00:00:00Z$`)
+var (
+	timestampRE = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T00:00:00Z$`)
+	ignoreRE    = regexp.MustCompile(`(?:^|\s)#\s*mgmt:ignore\s+(.*?)\s*$`)
+)
 
 // LoadResources reads resources/**/*.{yaml,yml} under root, sorted by path then
 // document order. Unparseable or incomplete documents become schema-invalid
@@ -115,9 +119,31 @@ func parseDocs(file string, src []byte) ([]Resource, []facts.Finding) {
 			continue
 		}
 		apiVersion, _ := obj["apiVersion"].(string)
-		res = append(res, Resource{APIVersion: apiVersion, Kind: kind, Name: name, Object: obj, File: file, Line: d.line})
+		res = append(res, Resource{APIVersion: apiVersion, Kind: kind, Name: name, Object: obj, File: file, Line: d.line,
+			Ignores: ignoreIDs(d.text)})
 	}
 	return res, finds
+}
+
+// ignoreIDs collects the ids of every "# mgmt:ignore" YAML comment in a
+// document, deduplicated and sorted.
+func ignoreIDs(text string) []string {
+	seen := map[string]bool{}
+	var ids []string
+	for _, l := range strings.Split(text, "\n") {
+		m := ignoreRE.FindStringSubmatch(l)
+		if m == nil {
+			continue
+		}
+		for _, id := range strings.Split(m[1], ",") {
+			if id = strings.TrimSpace(id); id != "" && !seen[id] {
+				seen[id] = true
+				ids = append(ids, id)
+			}
+		}
+	}
+	sort.Strings(ids)
+	return ids
 }
 
 // normalise turns timestamp scalars back into YYYY-MM-DD strings.

@@ -56,6 +56,10 @@ Person and date are inherited from context, so a mark is a single token.
 
 `@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names (`@fri`). A heading can carry its own date (`## Sam 2026-10-22`). Add `<!-- mgmt:ignore <id> -->` to a line to silence a warning there.
 
+Warnings anchored at a resource (for example `oneonone-overdue` on a Person) are
+silenced with a YAML comment anywhere in that resource's document:
+`# mgmt:ignore oneonone-overdue[,<id>…]`. Errors are never silenced.
+
 ## Extension points
 
 No rebuild needed for any of these.

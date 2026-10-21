@@ -31,3 +31,4 @@ spec:
   role: platform-engineer
   level: L3
   since: 2026-05-01
+  # mgmt:ignore gap-unaddressed

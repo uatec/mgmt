@@ -100,6 +100,13 @@ func extractFacts(root string, resources []load.Resource, f *facts.Facts) ([]fac
 	x := extract.Extract(notes, extract.NewIndex(resources))
 	f.Evidence, f.Touches, f.Actions, f.Inputs = x.Evidence, x.Touches, x.Actions, x.Inputs
 	f.Sections, f.Ignores = x.Sections, x.Ignores
+	// "# mgmt:ignore" in a resource document anchors at the document's start,
+	// where resource-anchored warnings point.
+	for _, r := range resources {
+		if len(r.Ignores) > 0 {
+			f.Ignores = append(f.Ignores, facts.Ignore{File: r.File, Line: r.Line, IDs: r.Ignores})
+		}
+	}
 	finds := make([]facts.Finding, 0, len(x.Diagnostics))
 	for _, d := range x.Diagnostics {
 		finds = append(finds, facts.Finding{Severity: d.Severity, ID: d.Code, File: d.File, Line: d.Line, Message: d.Message, Suggest: d.Suggest})

@@ -14,6 +14,6 @@ Fires every core warning at `--now 2026-10-21` with no errors, so
 | notes/2026-W42.md:9 and notes/2026-W43.md:6 (same open text, different case and spacing) | `action-duplicate` on both |
 | notes/2026-W43.md:8 (`## Priya` section with no tokens) | `section-unmarked` |
 | resources/people.yaml:1 (sam: planning disproven, crossteam unproven, no open actions) | `gap-unaddressed` |
-| resources/people.yaml:24 (jo: managed since 2026-05-01, no notes at all) | `competency-untouched`, `gap-unaddressed`, `oneonone-overdue` |
+| resources/people.yaml:24 (jo: managed since 2026-05-01, no notes at all; `# mgmt:ignore gap-unaddressed` in jo's document) | `competency-untouched`, `oneonone-overdue`; `gap-unaddressed` suppressed |
 | resources/cycle.yaml:1 (priya and jo have no `!self-assessment`; sam does, at notes/2026-W43.md:5) | `cycle-input-missing` |
 | resources/cycle.yaml:1 (sam and jo have gaps; priya proved ownership at notes/2026-W38.md:4) | `cycle-evidence-thin` |

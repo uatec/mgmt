@@ -131,3 +131,20 @@ func TestFactsEmptyListsMarshalAsArrays(t *testing.T) {
 		}
 	}
 }
+
+func TestParseDocsIgnoreComments(t *testing.T) {
+	src := "apiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: sam\n---\n" +
+		"# mgmt:ignore oneonone-overdue\napiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: jo  # mgmt:ignore gap-unaddressed, competency-untouched\n" +
+		"spec:\n  aliases: [Jo] # mgmt:ignore oneonone-overdue\n"
+	res, finds := parseDocs("resources/p.yaml", []byte(src))
+	if len(finds) != 0 || len(res) != 2 {
+		t.Fatalf("res=%+v finds=%+v", res, finds)
+	}
+	if len(res[0].Ignores) != 0 {
+		t.Errorf("sam ignores = %v, want none", res[0].Ignores)
+	}
+	want := []string{"competency-untouched", "gap-unaddressed", "oneonone-overdue"}
+	if strings.Join(res[1].Ignores, ",") != strings.Join(want, ",") || res[1].Line != 6 {
+		t.Errorf("jo ignores = %v line %d, want %v line 6", res[1].Ignores, res[1].Line, want)
+	}
+}

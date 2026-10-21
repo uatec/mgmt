@@ -64,7 +64,8 @@ type Section struct {
 	TokenCount int    `json:"tokenCount"`
 }
 
-// Ignore is a <!-- mgmt:ignore ... --> comment.
+// Ignore is a <!-- mgmt:ignore ... --> notes comment, or the "# mgmt:ignore ..."
+// comments of one resource document (Line is the document's start).
 type Ignore struct {
 	File string   `json:"file"`
 	Line int      `json:"line"`
