@@ -18,6 +18,7 @@ Cycles:
   has no notes in its window.
 
 Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
+`notes/2026-W40.md` and `notes/2026-W42.md` end with a `## 1:1 Alex` section.
 `notes/2026-W43.md` also has a `## Platform sync (Tue 20 Oct)` section dated
 2026-10-20 with `@sam` and `@priya` lines.
 
@@ -64,5 +65,25 @@ collab.feedback (+W33:4, +W39:4). W43:4 (+ownership) is outside the window.
 No notes at all: no actions, no previous 1:1, every required competency
 unproven and not addressed, focus on `collab.feedback` (first required id,
 never touched), and every ensek-2026-h2 input missing.
+
+## alex (L2, since 2026-09-01, cadence 14d, in no cycle)
+
+No ReviewCycle selects alex, so the rolling window applies (Decision L):
+2026-09-01 (since) to 2026-10-21. `review` is titled `last 90d` and has no
+inputs section; `prep` shows `(rolling)` and no Cycle section. alex adds no
+lint warnings.
+
+- delivery.ownership proven (+W40:8, 2026-09-28).
+- collab.feedback proven: -W40:9 then +W42:10 (latest positive decides).
+- Actions: closed W42:11 (mine, addresses collab.feedback); open W42:12
+  (theirs) due 2026-10-23.
+- Last 1:1 section: W42 (2026-10-12), nothing since. No gaps. Focus:
+  delivery.ownership, last touched 2026-09-28.
+
+## review actions (Ruling R14)
+
+The review pack lists only actions dated within the window: sam's W42:6 and
+priya's W41:7 fall after their 2026-09-30 window end, so their packs show no
+actions.
 
 Note text avoids the words rating, below, meets and exceeds (Ruling R5).

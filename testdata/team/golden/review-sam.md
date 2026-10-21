@@ -28,7 +28,7 @@ Negative:
 - 2026-08-03 · came to refinement without reading the tickets (notes/2026-W32.md:4)
 
 Actions:
-- [ ] 2026-10-12 · book a planning pairing session (notes/2026-W42.md:6)
+- none
 
 ## delivery
 

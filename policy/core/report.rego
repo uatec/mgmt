@@ -145,9 +145,15 @@ _review_item(p, c) := {
 	"status": object.get(derive.status, [p, c, "status"], "unproven"),
 	"positive": _newest_first([m | some m in ms; m.polarity > 0]),
 	"negative": _newest_first([m | some m in ms; m.polarity < 0]),
-	"actions": object.get(derive.addressed_by, [p, c], []),
+	"actions": [a | some a in object.get(derive.addressed_by, [p, c], []); _in_window(p, a.date)],
 } if {
 	ms := object.get(derive.marks, [p, c], [])
+}
+
+# Ruling R14: the pack shows actions dated within the window, like evidence.
+_in_window(p, date) if {
+	derive.window[p].from <= date
+	date <= derive.window[p].to
 }
 
 # _newest_first sorts records descending by [date, file, line].

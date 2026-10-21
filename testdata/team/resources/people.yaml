@@ -34,3 +34,15 @@ spec:
   role: platform-engineer
   level: L3
   since: 2026-05-01
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: alex
+spec:
+  displayName: Alex Example
+  aliases: [Alex]
+  framework: eng
+  role: platform-engineer
+  level: L2
+  since: 2026-09-01

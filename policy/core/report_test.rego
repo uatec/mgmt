@@ -230,10 +230,12 @@ test_no_cycle_is_null if {
 # --- review ---------------------------------------------------------------
 
 test_review_groups_required_by_theme_newest_first if {
-	open := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"]})
-	closed := object.union(action("sam", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"]})
+	open := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"], "date": "2026-09-30"})
+	closed := object.union(action("sam", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"], "date": "2026-05-01"})
+	before := object.union(action("me", "", "notes/a.md", 7, true), {"addresses": ["collab.planning"], "date": "2026-04-30"})
+	after := object.union(action("me", "", "notes/a.md", 8, false), {"addresses": ["collab.planning"]}) # 2026-10-01
 	facts := json.patch(base, [
-		{"op": "replace", "path": "/actions", "value": [open, closed]},
+		{"op": "replace", "path": "/actions", "value": [open, closed, before, after]},
 		{"op": "replace", "path": "/evidence", "value": [
 			mark(1, "2026-08-10", "notes/b.md", 6),
 			mark(-1, "2026-09-14", "notes/c.md", 6),
@@ -252,7 +254,8 @@ test_review_groups_required_by_theme_newest_first if {
 	planning.status == "disproven"
 	locs(planning.positive) == ["notes/b.md:6", "notes/a.md:3"]
 	locs(planning.negative) == ["notes/c.md:6"]
-	locs(planning.actions) == ["notes/a.md:1", "notes/a.md:2"]
+	# R14: only actions dated within the window (2026-05-01..2026-09-30).
+	locs(planning.actions) == ["notes/a.md:2", "notes/a.md:1"]
 	r.themes[1].competencies[0].positive == []
 	r.themes[1].competencies[0].actions == []
 }

@@ -182,6 +182,10 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		fmt.Fprintf(stderr, "mgmt: unknown person %q\n", pos[0])
 		return 2
 	}
+	if opts.Cycle != "" && !inCycle(res.Derive, opts.Cycle, person) {
+		fmt.Fprintf(stderr, "mgmt: %s is not in cycle %q\n", person, opts.Cycle)
+		return 2
+	}
 	keys := []string{person}
 	if len(pos) == 2 {
 		id, suggest, ok := resolveCompetency(res.Facts, person, pos[1])
@@ -207,6 +211,20 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 	}
 	_, _ = io.WriteString(stdout, text)
 	return 0
+}
+
+// inCycle reports whether the cycle selects the person
+// (data.mgmt.derive.cycle_people), so an explicit --cycle never silently
+// falls back to the rolling window.
+func inCycle(derive map[string]any, cycle, person string) bool {
+	byCycle, _ := derive["cycle_people"].(map[string]any)
+	people, _ := byCycle[cycle].([]any)
+	for _, p := range people {
+		if p == person {
+			return true
+		}
+	}
+	return false
 }
 
 // parseInterspersed parses fl's flags wherever they appear in args and

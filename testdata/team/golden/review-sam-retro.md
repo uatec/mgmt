@@ -26,7 +26,7 @@ Negative:
 - none
 
 Actions:
-- [ ] 2026-10-12 · book a planning pairing session (notes/2026-W42.md:6)
+- none
 
 ## delivery
 
