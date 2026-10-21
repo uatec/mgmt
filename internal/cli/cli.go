@@ -165,6 +165,9 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		return usageError(stderr, name+": "+err.Error())
 	}
 	if want := len(strings.Fields(argUsage)); len(pos) != want {
+		if argUsage == "" {
+			argUsage = "no arguments"
+		}
 		return usageError(stderr, fmt.Sprintf("%s takes %s", name, argUsage))
 	}
 	opts := engine.Options{Now: now, Cycle: *cycle}

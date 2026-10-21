@@ -468,3 +468,28 @@ test_status_no_active_cycle if {
 	s.cycles == []
 	count(s.rows) == 1
 }
+
+test_status_rows_restricted_to_explicit_cycle if {
+	only_sam := json.patch(two_people, [
+		{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/selector/people", "value": ["sam"]},
+		{"op": "replace", "path": "/options/cycle", "value": "ensek-2026-h2"},
+	])
+	s := report.status with input as only_sam
+	[r.person | some r in s.rows] == ["sam"]
+	s.competencies == ["collab.planning", "delivery.ownership", "scope.crossteam"]
+}
+
+test_status_all_people_without_explicit_cycle if {
+	only_sam := json.patch(two_people, [{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/selector/people", "value": ["sam"]}])
+	s := report.status with input as only_sam
+	[r.person | some r in s.rows] == ["priya", "sam"]
+}
+
+test_status_explicit_cycle_columns_follow_rows if {
+	only_priya := json.patch(two_people, [
+		{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/selector/people", "value": ["priya"]},
+		{"op": "replace", "path": "/options/cycle", "value": "ensek-2026-h2"},
+	])
+	s := report.status with input as only_priya
+	s.competencies == ["delivery.ownership"]
+}

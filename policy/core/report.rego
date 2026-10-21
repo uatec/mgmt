@@ -202,16 +202,21 @@ _decides(d, m) := true if {
 
 # The team matrix (every Person, by name; "" where a competency is not
 # required) and, per active cycle, the status conditions over the people the
-# cycle selects. Not keyed by person.
+# cycle selects. With an explicit --cycle the matrix lists only the people
+# that cycle selects (Ruling R15). Not keyed by person.
 status := {
 	"competencies": _status_competencies,
 	"rows": [{"person": p, "cells": [{"competency": c, "status": _cell(p, c)} | some c in _status_competencies]} |
-		some p in sort(object.keys(_persons))
+		some p in _status_people
 	],
 	"cycles": [{"name": cy, "conditions": _conditions(cy)} | some cy in derive.active_cycles],
 }
 
-_status_competencies := sort({c | some cs in derive.required; some c in cs})
+_status_people := sort(object.keys(_persons)) if _option_cycle == ""
+
+_status_people := sort(_cycle_people(_option_cycle)) if _option_cycle != ""
+
+_status_competencies := sort({c | some p in _status_people; some c in object.get(derive.required, p, [])})
 
 _cell(p, c) := object.get(derive.status, [p, c, "status"], "unproven") if c in object.get(derive.required, p, [])
 
@@ -224,6 +229,8 @@ _plural(1, one, _) := sprintf("1 %s", [one])
 _plural(n, _, many) := sprintf("%d %s", [n, many]) if n != 1
 
 _people(n) := _plural(n, "person", "people")
+
+_option_cycle := object.get(input, ["options", "cycle"], "")
 
 _cycle_people(cy) := object.get(derive.cycle_people, cy, [])
 

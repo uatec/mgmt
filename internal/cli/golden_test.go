@@ -63,6 +63,7 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"status", "--cycle", "retro-2026-h1"}, 0, "status-retro.md", ""},
 		{"team", []string{"status", "--cycle", "nope"}, 2, "", "status-nope.stderr"},
 		{"spec-example", []string{"status"}, 0, "status.md", ""},
+		{"spec-example", []string{"--now", "2027-01-15", "status"}, 0, "status-no-cycle.md", ""},
 	}
 	for _, r := range rows {
 		t.Run(r.fixture+"/"+strings.Join(r.args, "_"), func(t *testing.T) {
@@ -333,5 +334,16 @@ func TestExplainCountingRule(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)
 		}
+	}
+}
+
+func TestStatusRejectsArguments(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	root := filepath.Join("..", "..", "testdata", "team")
+	if code := Run([]string{"status", "sam"}, root, &stdout, &stderr); code != 2 {
+		t.Fatalf("exit = %d, want 2", code)
+	}
+	if !strings.HasPrefix(stderr.String(), "mgmt: status takes no arguments\n") {
+		t.Errorf("stderr = %q", stderr.String())
 	}
 }

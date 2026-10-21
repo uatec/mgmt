@@ -2,8 +2,6 @@
 
 | Person | collab.feedback | collab.planning | delivery.ownership | scope.crossteam |
 | --- | --- | --- | --- | --- |
-| alex | proven | — | proven | — |
-| jo | unproven | unproven | unproven | unproven |
 | priya | unproven | — | unproven | — |
 | sam | unproven | unproven | unproven | unproven |
 
