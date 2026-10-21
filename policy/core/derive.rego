@@ -14,6 +14,9 @@ _frameworks := object.get(input, ["resources", "CompetencyFramework"], {})
 
 _cycles := object.get(input, ["resources", "ReviewCycle"], {})
 
+# default_window is Workspace.spec.defaultWindow, used without a cycle.
+default_window := _default_window
+
 _default_window := w if {
 	ws := [object.get(x, ["spec", "defaultWindow"], "90d") | some x in object.get(input, ["resources", "Workspace"], {})]
 	count(ws) > 0

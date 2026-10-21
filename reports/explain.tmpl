@@ -1,0 +1,26 @@
+{{- /* Why a competency has its status. view = data.mgmt.report.explain[person][competency]. */ -}}
+{{- define "mark" -}}
+- {{.date}} {{if eq (toString .polarity) "1"}}+{{else}}-{{end}} · {{.text}} ({{.file}}:{{.line}})
+{{- end -}}
+{{- with .view -}}
+# Explain: {{.person.name}} · {{.competency.id}}
+
+Status: {{.status}}
+Required: {{if .required}}yes{{else}}no{{end}} ({{.person.role}} {{.person.level}})
+{{$min := .settings.minPerCompetency -}}
+Rule: {{if eq .rule "negativeOverrides" -}}
+negativeOverrides: the most recent mark decides; proven needs at least {{$min}} positive mark{{if ne (toString $min) "1"}}s{{end}}
+{{- else -}}
+counting: proven when positives exceed negatives and reach {{$min}} ({{.positives}} positive, {{.negatives}} negative)
+{{- end}}
+Window: {{.window.from}} to {{.window.to}} ({{with .window.cycle}}{{.}}{{else}}rolling{{end}})
+
+## Considered
+{{range .considered}}{{template "mark" .}}{{if .decides}} ← decides{{end}}
+{{else}}- none
+{{end}}
+## Outside window
+{{range .outside}}{{template "mark" .}}
+{{else}}- none
+{{end -}}
+{{- end -}}

@@ -5,8 +5,13 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
+
+	mgmt "github.com/uatec/mgmt"
+	"github.com/uatec/mgmt/internal/engine"
+	"github.com/uatec/mgmt/internal/render"
 )
 
 var update = flag.Bool("update", false, "rewrite golden files")
@@ -38,6 +43,19 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"prep", "jo"}, 0, "prep-jo.md", ""},
 		{"team", []string{"prep", "nobody"}, 2, "", "prep-nobody.stderr"},
 		{"errors", []string{"prep", "sam"}, 2, "", "prep-refused.stderr"},
+		{"team", []string{"prep", "sam", "--cycle", "retro-2026-h1"}, 0, "prep-sam-retro.md", ""},
+		{"team", []string{"prep", "jo", "--cycle", "retro-2026-h1"}, 0, "prep-jo-rolling.md", ""},
+		{"team", []string{"review", "sam"}, 0, "review-sam.md", ""},
+		{"team", []string{"review", "sam", "--cycle", "retro-2026-h1"}, 0, "review-sam-retro.md", ""},
+		{"team", []string{"review", "--cycle", "retro-2026-h1", "jo"}, 0, "review-jo-rolling.md", ""},
+		{"team", []string{"review", "jo"}, 0, "review-jo.md", ""},
+		{"team", []string{"review", "Priya"}, 0, "review-priya.md", ""},
+		{"team", []string{"review", "sam", "--cycle", "nope"}, 2, "", "review-nope.stderr"},
+		{"team", []string{"explain", "sam", "planning"}, 0, "explain-sam-planning.md", ""},
+		{"team", []string{"explain", "sam", "delivery.ownership"}, 0, "explain-sam-ownership.md", ""},
+		{"team", []string{"explain", "jo", "PLANNING"}, 0, "explain-jo-planning.md", ""},
+		{"team", []string{"explain", "sam", "plannig"}, 2, "", "explain-plannig.stderr"},
+		{"team", []string{"explain", "sam", "zzzzzz"}, 2, "", "explain-zzzzzz.stderr"},
 	}
 	for _, r := range rows {
 		t.Run(r.fixture+"/"+strings.Join(r.args, "_"), func(t *testing.T) {
@@ -179,6 +197,11 @@ func TestUsageErrors(t *testing.T) {
 		{"lint", "extra"},
 		{"prep"},
 		{"prep", "sam", "extra"},
+		{"prep", "sam", "--cycle"},
+		{"review"},
+		{"review", "sam", "extra"},
+		{"explain", "sam"},
+		{"explain", "sam", "planning", "extra"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := Run(args, root, &stdout, &stderr); code != 2 {
@@ -199,6 +222,108 @@ func TestPlural(t *testing.T) {
 	for in, want := range cases {
 		if got := summary(in[0], in[1]); got != want {
 			t.Errorf("summary%v = %q, want %q", in, got, want)
+		}
+	}
+}
+
+// TestReviewNeverRates: no review pack states a rating (the cycle's outcomes
+// list below/meets/exceeds, and the fixture notes avoid those words).
+func TestReviewNeverRates(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "testdata", "*", "golden", "review-*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) < 4 {
+		t.Fatalf("found %d review goldens, want at least 4", len(files))
+	}
+	rating := regexp.MustCompile(`(?i)rating|below|meets|exceeds`)
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(b), "\n") {
+			if rating.MatchString(line) {
+				t.Errorf("%s:%d states a rating: %q", f, i+1, line)
+			}
+		}
+	}
+}
+
+// TestReportDataMissingView: a person argument whose view is undefined is an
+// error, not an empty report.
+func TestReportDataMissingView(t *testing.T) {
+	res := &engine.Result{Report: map[string]any{"prep": map[string]any{"priya": map[string]any{}}}}
+	if _, err := reportData(res, "prep", []string{"sam"}, engine.Options{Now: "2026-10-21"}); err == nil ||
+		!strings.Contains(err.Error(), `no prep report for "sam"`) {
+		t.Errorf("err = %v", err)
+	}
+	if _, err := reportData(res, "prep", []string{"priya"}, engine.Options{Now: "2026-10-21"}); err != nil {
+		t.Errorf("priya: %v", err)
+	}
+}
+
+// TestPrepTemplateBranches covers prep.tmpl branches no team golden reaches.
+func TestPrepTemplateBranches(t *testing.T) {
+	view := map[string]any{
+		"person":      map[string]any{"displayName": "Sam Example"},
+		"window":      map[string]any{"from": "2026-07-23", "to": "2026-10-21", "cycle": nil},
+		"actions":     map[string]any{"mine": []any{}, "theirs": []any{}},
+		"lastSection": nil,
+		"since":       []any{},
+		"gaps": []any{map[string]any{
+			"competency": "collab.planning", "title": "Plans", "status": "disproven",
+			"addressedBy": []any{
+				map[string]any{"file": "notes/a.md", "line": 5, "text": "x"},
+				map[string]any{"file": "notes/b.md", "line": 6, "text": "y"},
+			},
+		}},
+		"focus": nil,
+		"cycle": map[string]any{"name": "retro", "nextMilestone": nil, "missing": []any{}},
+	}
+	got, err := render.Render("prep", map[string]any{"now": "2026-10-21", "view": view}, mgmt.CoreReports, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
+		"## Since last 1:1 (none)\n- none\n",
+		"addressed by notes/a.md:5, notes/b.md:6\n",
+		"## Suggested focus\n- none\n",
+		"- Next milestone: none\n- Missing: none\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
+		}
+	}
+}
+
+// TestExplainCountingRule covers the counting rule line, which no team
+// cycle uses.
+func TestExplainCountingRule(t *testing.T) {
+	view := map[string]any{
+		"person":     map[string]any{"name": "sam", "role": "platform-engineer", "level": "L3"},
+		"competency": map[string]any{"id": "collab.planning", "title": "Plans"},
+		"required":   false, "status": "proven", "rule": "counting", "positives": 2, "negatives": 1,
+		"settings": map[string]any{"minPerCompetency": 2, "negativeOverrides": false},
+		"window":   map[string]any{"from": "2026-07-23", "to": "2026-10-21", "cycle": nil},
+		"considered": []any{map[string]any{
+			"date": "2026-09-01", "polarity": -1, "text": "t", "file": "notes/a.md", "line": 3, "decides": false,
+		}},
+		"outside": []any{},
+	}
+	got, err := render.Render("explain", map[string]any{"view": view}, mgmt.CoreReports, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		"Required: no (platform-engineer L3)\n",
+		"Rule: counting: proven when positives exceed negatives and reach 2 (2 positive, 1 negative)\n",
+		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
+		"- 2026-09-01 - · t (notes/a.md:3)\n\n## Outside window\n- none\n",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("missing %q in\n%s", want, got)
 		}
 	}
 }

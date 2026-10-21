@@ -226,3 +226,102 @@ test_no_cycle_is_null if {
 	p.cycle == null
 	p.window.cycle == null
 }
+
+# --- review ---------------------------------------------------------------
+
+test_review_groups_required_by_theme_newest_first if {
+	open := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"]})
+	closed := object.union(action("sam", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"]})
+	facts := json.patch(base, [
+		{"op": "replace", "path": "/actions", "value": [open, closed]},
+		{"op": "replace", "path": "/evidence", "value": [
+			mark(1, "2026-08-10", "notes/b.md", 6),
+			mark(-1, "2026-09-14", "notes/c.md", 6),
+			mark(1, "2026-08-10", "notes/a.md", 3),
+			mark(1, "2026-10-19", "notes/d.md", 1), # outside the window
+		]},
+	])
+	r := report.review.sam with input as facts
+	r.person.displayName == "Sam Example"
+	r.cycle == "ensek-2026-h2"
+	r.window == {"from": "2026-05-01", "to": "2026-09-30", "cycle": "ensek-2026-h2"}
+	[t.theme | some t in r.themes] == ["collab", "delivery", "scope"]
+	[c.id | some t in r.themes; some c in t.competencies] == ["collab.planning", "delivery.ownership", "scope.crossteam"]
+	planning := r.themes[0].competencies[0]
+	planning.title == "Plans"
+	planning.status == "disproven"
+	locs(planning.positive) == ["notes/b.md:6", "notes/a.md:3"]
+	locs(planning.negative) == ["notes/c.md:6"]
+	locs(planning.actions) == ["notes/a.md:1", "notes/a.md:2"]
+	r.themes[1].competencies[0].positive == []
+	r.themes[1].competencies[0].actions == []
+}
+
+test_review_inputs_sorted_by_name if {
+	inp := {"person": "sam", "input": "peer-feedback", "cycle": "ensek-2026-h2", "date": "2026-10-19", "file": "notes/a.md", "line": 1, "text": "t"}
+	r := report.review.sam with input as with_records("inputs", [inp])
+	[i.name | some i in r.inputs] == ["okrs", "peer-feedback", "self-assessment"]
+	r.inputs[1].received == 1
+	locs(r.inputs[1].records) == ["notes/a.md:1"]
+}
+
+# Decision L: without a cycle the rolling window applies and inputs are null.
+test_review_without_cycle if {
+	r := report.review.sam with input as doc({"sam": sam}, {})
+	r.cycle == null
+	r.inputs == null
+	r.defaultWindow == "90d"
+	r.window == {"from": "2026-07-23", "to": "2026-10-21", "cycle": null}
+}
+
+test_review_missing_framework_is_total if {
+	broken := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/framework", "value": "nope"}])
+	r := report.review.sam with input as broken
+	r.themes == []
+}
+
+# --- explain --------------------------------------------------------------
+
+explain_marks := [
+	mark(-1, "2026-09-14", "notes/c.md", 6),
+	mark(1, "2026-08-10", "notes/b.md", 6),
+	mark(1, "2026-09-01", "notes/b.md", 9),
+	mark(-1, "2026-10-19", "notes/d.md", 6), # outside the window
+	mark(1, "2026-04-02", "notes/e.md", 1), # before since: neither
+]
+
+test_explain_negative_overrides_latest_decides if {
+	e := report.explain.sam["collab.planning"] with input as with_records("evidence", explain_marks)
+	e.person.level == "L3"
+	e.competency == {"id": "collab.planning", "title": "Plans"}
+	e.required == true
+	e.status == "disproven"
+	e.rule == "negativeOverrides"
+	e.settings == {"minPerCompetency": 1, "negativeOverrides": true}
+	[e.positives, e.negatives] == [2, 1]
+	e.window.from == "2026-05-01"
+	locs(e.considered) == ["notes/c.md:6", "notes/b.md:9", "notes/b.md:6"]
+	[c.decides | some c in e.considered] == [true, false, false]
+	locs(e.outside) == ["notes/d.md:6"]
+}
+
+test_explain_counting_no_single_item_decides if {
+	facts := json.patch(with_records("evidence", explain_marks), [{
+		"op": "add", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/evidence",
+		"value": {"minPerCompetency": 2, "negativeOverrides": false},
+	}])
+	e := report.explain.sam["collab.planning"] with input as facts
+	e.status == "proven"
+	e.rule == "counting"
+	e.settings.minPerCompetency == 2
+	[c.decides | some c in e.considered] == [false, false, false]
+}
+
+test_explain_not_required_and_empty if {
+	no_scope := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	e := report.explain.sam["scope.crossteam"] with input as no_scope
+	e.required == false
+	e.status == "unproven"
+	e.considered == []
+	e.outside == []
+}

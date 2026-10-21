@@ -15,7 +15,9 @@ import (
 
 	mgmt "github.com/uatec/mgmt"
 	"github.com/uatec/mgmt/internal/engine"
+	"github.com/uatec/mgmt/internal/extract"
 	"github.com/uatec/mgmt/internal/facts"
+	"github.com/uatec/mgmt/internal/load"
 	"github.com/uatec/mgmt/internal/render"
 )
 
@@ -24,7 +26,10 @@ const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
 commands:
   facts                                print the facts document as JSON
   lint [--strict] [--format text|json] print errors and warnings
-  prep <person>                        print the 1:1 prep sheet
+  prep <person> [--cycle NAME]         print the 1:1 prep sheet
+  review <person> [--cycle NAME]       print the review evidence pack
+  explain <person> <competency> [--cycle NAME]
+                                       explain why a competency has its status
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
@@ -52,7 +57,11 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	case "lint":
 		code = runLint(rest[1:], root, *now, &buf, stderr)
 	case "prep":
-		code = runPrep(rest[1:], root, *now, &buf, stderr)
+		code = runReport("prep", rest[1:], "<person>", root, *now, &buf, stderr)
+	case "review":
+		code = runReport("review", rest[1:], "<person>", root, *now, &buf, stderr)
+	case "explain":
+		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}
@@ -140,16 +149,21 @@ func runLint(args []string, root, now string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-func runPrep(args []string, root, now string, stdout, stderr io.Writer) int {
-	if len(args) != 1 {
-		return usageError(stderr, "prep takes exactly one person")
+// runReport parses "<args> [--cycle NAME]" (flags may come anywhere), runs
+// the pipeline, refuses on errors (the lint text goes to stderr), resolves
+// the person and, for explain, the competency, and renders the report.
+func runReport(name string, args []string, argUsage, root, now string, stdout, stderr io.Writer) int {
+	fl := flag.NewFlagSet(name, flag.ContinueOnError)
+	fl.SetOutput(io.Discard)
+	cycle := fl.String("cycle", "", "")
+	pos, err := parseInterspersed(fl, args)
+	if err != nil {
+		return usageError(stderr, name+": "+err.Error())
 	}
-	return runReport("prep", args[0], root, engine.Options{Now: now}, stdout, stderr)
-}
-
-// runReport runs the pipeline, refuses on errors (the lint text goes to
-// stderr), resolves the person argument when given, and renders the report.
-func runReport(name, personArg, root string, opts engine.Options, stdout, stderr io.Writer) int {
+	if want := len(strings.Fields(argUsage)); len(pos) != want {
+		return usageError(stderr, fmt.Sprintf("%s takes %s", name, argUsage))
+	}
+	opts := engine.Options{Now: now, Cycle: *cycle}
 	res, err := engine.Run(root, opts)
 	if err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
@@ -159,15 +173,29 @@ func runReport(name, personArg, root string, opts engine.Options, stdout, stderr
 		_, _ = io.WriteString(stderr, lintText(res.Errors, res.Warnings))
 		return 2
 	}
-	person := ""
-	if personArg != "" {
-		var ok bool
-		if person, ok = resolvePerson(res.Facts, personArg); !ok {
-			fmt.Fprintf(stderr, "mgmt: unknown person %q\n", personArg)
+	if _, ok := res.Facts.Resources["ReviewCycle"][opts.Cycle]; opts.Cycle != "" && !ok {
+		fmt.Fprintf(stderr, "mgmt: unknown cycle %q\n", opts.Cycle)
+		return 2
+	}
+	person, ok := resolvePerson(res.Facts, pos[0])
+	if !ok {
+		fmt.Fprintf(stderr, "mgmt: unknown person %q\n", pos[0])
+		return 2
+	}
+	keys := []string{person}
+	if len(pos) == 2 {
+		id, suggest, ok := resolveCompetency(res.Facts, person, pos[1])
+		if !ok {
+			fmt.Fprintf(stderr, "mgmt: unknown competency %q", pos[1])
+			if suggest != "" {
+				fmt.Fprintf(stderr, " (did you mean %q?)", suggest)
+			}
+			fmt.Fprintln(stderr)
 			return 2
 		}
+		keys = append(keys, id)
 	}
-	data, err := reportData(res, name, person, opts)
+	data, err := reportData(res, name, keys, opts)
 	if err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
 		return 2
@@ -179,6 +207,22 @@ func runReport(name, personArg, root string, opts engine.Options, stdout, stderr
 	}
 	_, _ = io.WriteString(stdout, text)
 	return 0
+}
+
+// parseInterspersed parses fl's flags wherever they appear in args and
+// returns the positional arguments in order.
+func parseInterspersed(fl *flag.FlagSet, args []string) ([]string, error) {
+	var pos []string
+	for {
+		if err := fl.Parse(args); err != nil {
+			return nil, err
+		}
+		if fl.NArg() == 0 {
+			return pos, nil
+		}
+		pos = append(pos, fl.Arg(0))
+		args = fl.Args()[1:]
+	}
 }
 
 // resolvePerson matches arg against Person names and aliases,
@@ -205,17 +249,51 @@ func resolvePerson(f facts.Facts, arg string) (string, bool) {
 	return "", false
 }
 
-// reportData is the template data (Ruling R4): view is report[name][person]
-// when a person is given, else report[name]; null when undefined.
-func reportData(res *engine.Result, name, person string, opts engine.Options) (map[string]any, error) {
+// resolveCompetency resolves arg through the person's framework (tokens,
+// full ids, unambiguous suffixes) as the extractor does. When it doesn't
+// resolve, it returns the closest token, id or suffix as a suggestion.
+func resolveCompetency(f facts.Facts, person, arg string) (id, suggest string, ok bool) {
+	var resources []load.Resource
+	for _, kind := range sortedKeys(f.Resources) {
+		for _, name := range sortedKeys(f.Resources[kind]) {
+			obj, _ := f.Resources[kind][name].(map[string]any)
+			resources = append(resources, load.Resource{Kind: kind, Name: name, Object: obj})
+		}
+	}
+	idx := extract.NewIndex(resources)
+	if id, res := idx.Competency(person, arg); res == extract.Resolved {
+		return id, "", true
+	}
+	return "", extract.Suggest(arg, idx.TokenNames(person)), false
+}
+
+func sortedKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// reportData is the template data (Ruling R4): view is report[name] indexed
+// by keys (the person, then for explain the competency). A view missing for
+// those keys is an error rather than an empty report.
+func reportData(res *engine.Result, name string, keys []string, opts engine.Options) (map[string]any, error) {
 	factsDoc, err := plainJSON(res.Facts)
 	if err != nil {
 		return nil, err
 	}
-	var view any = res.Report[name]
-	if person != "" {
-		byPerson, _ := view.(map[string]any)
-		view = byPerson[person]
+	view := res.Report[name]
+	for _, k := range keys {
+		m, _ := view.(map[string]any)
+		if view = m[k]; view == nil {
+			return nil, fmt.Errorf("no %s report for %q", name, strings.Join(keys, " "))
+		}
+	}
+	person := ""
+	if len(keys) > 0 {
+		person = keys[0]
 	}
 	return map[string]any{
 		"now":    opts.Now,

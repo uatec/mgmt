@@ -1,0 +1,34 @@
+{{- /* Review evidence pack. view = data.mgmt.report.review[person]. Never states a rating. */ -}}
+{{- define "evidence" -}}
+- {{.date}} · {{.text}} ({{.file}}:{{.line}})
+{{end -}}
+{{- with .view -}}
+# Review evidence: {{.person.displayName}} — {{with .cycle}}{{.}}{{else}}last {{$.view.defaultWindow}}{{end}}
+
+{{.person.role}} {{.person.level}}{{with .window}} · window {{.from}} to {{.to}}{{end}}
+{{range .themes}}
+## {{.theme}}
+{{range .competencies}}
+### {{.id}} · {{.title}}
+Status: {{.status}}
+
+Positive:
+{{range .positive}}{{template "evidence" .}}{{else}}- none
+{{end}}
+Negative:
+{{range .negative}}{{template "evidence" .}}{{else}}- none
+{{end}}
+Actions:
+{{range .actions}}- [{{if .done}}x{{else}} {{end}}] {{.date}} · {{.text}} ({{.file}}:{{.line}})
+{{else}}- none
+{{end}}{{end}}{{else}}
+No required competencies.
+{{end}}
+{{- with .inputs}}
+## Cycle inputs
+{{range .}}{{$n := len .records}}{{$counted := gt (toString .minCount | atoi) 0 -}}
+- [{{if and .complete $n}}x{{else}} {{end}}] {{.name}}
+{{- if $counted}} · {{.received}} of {{.minCount}}{{else if not $n}} · {{if .required}}required, {{end}}not received{{end}}
+{{- if $n}} ({{range $i, $r := .records}}{{if $i}}, {{end}}{{$r.file}}:{{$r.line}}{{end}}){{end}}
+{{end}}{{end -}}
+{{- end -}}

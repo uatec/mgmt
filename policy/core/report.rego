@@ -118,3 +118,69 @@ _cycle(p) := {
 		not i.complete
 	])
 } else := null
+
+# --- review ---------------------------------------------------------------
+
+# The evidence pack: required competencies grouped by theme. It carries no
+# rating and none of the cycle's outcomes.
+review[p] := {
+	"person": _person(p),
+	"window": object.get(derive.window, p, null),
+	"cycle": object.get(derive.cycle, p, null),
+	"defaultWindow": derive.default_window,
+	"themes": _themes(p),
+	"inputs": _review_inputs(p),
+} if some p in object.keys(_persons)
+
+_theme(p, c) := object.get(derive.competencies, [p, c, "theme"], split(c, ".")[0])
+
+_themes(p) := [{"theme": t, "competencies": _by_key([[c, _review_item(p, c)] | some c in reqs; _theme(p, c) == t])} |
+	reqs := object.get(derive.required, p, [])
+	some t in sort({_theme(p, c) | some c in reqs})
+]
+
+_review_item(p, c) := {
+	"id": c,
+	"title": _title(p, c),
+	"status": object.get(derive.status, [p, c, "status"], "unproven"),
+	"positive": _newest_first([m | some m in ms; m.polarity > 0]),
+	"negative": _newest_first([m | some m in ms; m.polarity < 0]),
+	"actions": object.get(derive.addressed_by, [p, c], []),
+} if {
+	ms := object.get(derive.marks, [p, c], [])
+}
+
+# _newest_first sorts records descending by [date, file, line].
+_newest_first(records) := array.reverse(_by_key([[[r.date, r.file, r.line], r] | some r in records]))
+
+_review_inputs(p) := _by_key([[i.name, i] | some i in object.get(derive.inputs, [cy, p], [])]) if {
+	cy := derive.cycle[p]
+} else := null
+
+# --- explain --------------------------------------------------------------
+
+# Why a competency has its status: the rule, the window, and every mark
+# considered, newest first, flagging the one that decided (negativeOverrides
+# only: under counting the totals decide, not a single mark).
+explain[p][c] := {
+	"person": _person(p),
+	"competency": {"id": c, "title": _title(p, c)},
+	"required": c in object.get(derive.required, p, []),
+	"status": st.status,
+	"positives": st.positives,
+	"negatives": st.negatives,
+	"rule": st.rule,
+	"settings": derive.settings[p],
+	"window": derive.window[p],
+	"considered": _newest_first([object.union(m, {"decides": _decides(st.decidedBy, m)}) | some m in derive.marks[p][c]]),
+	"outside": _newest_first(derive.outside[p][c]),
+} if {
+	some p, comps in derive.competencies
+	some c in object.keys(comps)
+	st := derive.status[p][c]
+}
+
+_decides(d, m) := true if {
+	d.file == m.file
+	d.line == m.line
+} else := false
