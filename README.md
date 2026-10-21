@@ -20,7 +20,12 @@ Build static binaries with `make build` (output in `dist/`); `make test` runs th
 
 ## Commands
 
-All commands run from the workspace root and print to stdout (`--out FILE` writes a file; `--now YYYY-MM-DD` fixes today's date).
+All commands run from the workspace root and print to stdout. Two global flags
+work before or after the command: `--out FILE` writes the output to FILE
+instead (created with mode 0600, since reports carry personal data) and
+`--now YYYY-MM-DD` fixes today's date. `mgmt --now 2026-10-21 lint` and
+`mgmt lint --now 2026-10-21` are the same; so are `mgmt --out sam.md review sam`
+and `mgmt review sam --out sam.md`.
 
 | Command | Purpose |
 | --- | --- |
@@ -40,34 +45,79 @@ All commands run from the workspace root and print to stdout (`--out FILE` write
 Person and date are inherited from context, so a mark is a single token.
 
 ```markdown
-# 2026-W43                      <!-- date: file name YYYY-Www.md or YYYY-MM-DD*.md -->
+# 2026-W43
 
-## 1:1 Sam                      <!-- heading names the person (name or alias) -->
-- +ownership led the review     <!-- positive evidence -->
-- -planning quiet in refinement <!-- negative evidence -->
-- ~crossteam discussed Zoa      <!-- discussed, neutral -->
-- [ ] send the L4 section @28oct ~planning   <!-- open action, due date, addresses a competency -->
-- [x] done thing                <!-- closed action -->
-- !self-assessment submitted    <!-- ReviewCycle input received -->
+## 1:1 Sam
+- +ownership led the review
+- -planning quiet in refinement
+- ~crossteam discussed Zoa
+- [ ] send the L4 section @28oct ~planning
+- [x] done thing
+- !self-assessment submitted
 
 ## Platform sync
-- @priya +crossteam unblocked the handover   <!-- @person attributes the line -->
+- @priya +crossteam unblocked the handover
 ```
 
-`@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names (`@fri`). A heading can carry its own date (`## Sam 2026-10-22`). Add `<!-- mgmt:ignore <id> -->` to a line to silence a warning there.
+- The file name (`YYYY-Www.md` or `YYYY-MM-DD*.md`) or the H1 dates the file.
+  A heading can carry its own date (`## Sam 2026-10-22`, `## Sam (Wed 22 Oct)`).
+- A heading that names a Person (by name or alias) sets the person for the lines
+  under it. `@person` on a line attributes that line to someone else.
+- `+x` is positive evidence, `-x` negative evidence and `~x` a neutral "discussed"
+  touch, where `x` is a competency id or token.
+- `- [ ]` is an open action and `- [x]` a closed one. On an action, `@date` sets
+  the due date, `@person` the owner (default: you) and `~x` the competency it
+  addresses. `@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names
+  (`@fri`).
+- `!name` records a ReviewCycle input as received.
 
-Warnings anchored at a resource (for example `oneonone-overdue` on a Person) are
-silenced with a YAML comment anywhere in that resource's document:
-`# mgmt:ignore oneonone-overdue[,<id>…]`. Errors are never silenced.
+## Errors and warnings
+
+Errors block reports; warnings never do.
+
+Errors: `schema-invalid`, `ref-unknown`, `token-duplicate`, `alias-duplicate`,
+`token-unknown`, `person-unknown`, `person-missing`, `line-multi-person`,
+`heading-multi-person`, `evidence-in-action`, `date-unresolved`,
+`input-unknown`.
+
+Warnings: `section-unmarked`, `negative-unaddressed`, `gap-unaddressed`,
+`competency-untouched`, `action-overdue`, `action-no-due`, `action-duplicate`,
+`oneonone-overdue`, `cycle-input-missing`, `cycle-evidence-thin`.
+
+Warning thresholds are set in the Workspace as
+`spec.policy.<id>.<param>` (a whole number of days, or a duration such as `2w`):
+
+| Parameter | Default |
+| --- | --- |
+| `negative-unaddressed.graceDays` | 7 |
+| `competency-untouched.days` | 42 |
+| `cycle-input-missing.daysBefore` | 7 |
+| `cycle-evidence-thin.daysBefore` | 14 |
+
+```yaml
+spec:
+  policy:
+    competency-untouched: {days: 56}
+```
+
+`oneonone-overdue` uses the Person's `oneToOneCadence`, else the Workspace's.
+
+Silencing a warning (errors are never silenced):
+
+- In notes, put `<!-- mgmt:ignore <id>[,<id>] -->` on the line the warning points at.
+- For a warning that points at a resource (for example `oneonone-overdue`,
+  `gap-unaddressed` or `competency-untouched` on a Person, or
+  `cycle-input-missing` on a ReviewCycle), add the YAML comment
+  `# mgmt:ignore <id>[,<id>]` anywhere in that resource's document.
 
 ## Extension points
 
 No rebuild needed for any of these.
 
-- **Policies:** every `.rego` under `policy/` loads alongside the core policies. Packages are `mgmt.policy.<name>`, may read `data.mgmt.derive`, and emit `deny` and `warn` sets of `{id, person, file, line, message}`.
+- **Policies:** every `.rego` under `policy/` loads alongside the core policies. Packages are `mgmt.policy.<name>`, may read `data.mgmt.derive`, and emit `deny` and `warn` sets of `{id, person, file, line, message}`. `mgmt init` writes a commented example, `policy/example/example.rego`.
 - **Kinds:** a CUE definition under `schema/` registers a new `kind`; its resources appear in facts under `resources.<Kind>`.
 - **Reports:** a template in `reports/` named like a core report (`prep`, `review`, `explain`, `status`) replaces it; any other `reports/<name>.tmpl` runs with `mgmt report <name> [<person>]`.
-- **Thresholds:** override warning thresholds in `Workspace.spec.policy.<id>`.
+- **Thresholds:** override warning thresholds in `Workspace.spec.policy.<id>` (see [Errors and warnings](#errors-and-warnings)).
 
 Escape hatch (best effort): policies follow Conftest conventions, so
 `mgmt facts | conftest test --policy policy/ -` works.
