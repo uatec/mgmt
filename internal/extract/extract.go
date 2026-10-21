@@ -21,7 +21,7 @@ import (
 
 var (
 	ignoreRe   = regexp.MustCompile(`<!--\s*mgmt:ignore\s+([^>]*?)\s*-->`)
-	checkboxRe = regexp.MustCompile(`^\s*\[[ xX]\]`)
+	checkboxRe = regexp.MustCompile(`^\s*\[[ xX]\]\s*`)
 	markdown   = goldmark.New(goldmark.WithExtensions(extension.TaskList))
 )
 
@@ -57,7 +57,7 @@ type extractor struct {
 	out        *facts.Facts
 	file       string
 	src        []byte // BOM and CRs stripped; line numbers unchanged
-	masked     []byte // src with everything but scannable prose blanked
+	masked     []byte // src with everything but scannable prose replaced by maskByte
 	lineStarts []int
 	fileDate   time.Time
 	stack      []frame
@@ -109,16 +109,20 @@ func (x *extractor) run() {
 	})
 }
 
-// mask builds x.masked (Decision D): only text outside code spans survives,
-// so code, autolinks, raw HTML and link destinations are blank. It records
-// every mgmt:ignore comment on the way.
+// maskByte replaces masked source bytes. It is neither whitespace nor '(',
+// so a sigil right after a masked region is not at a token boundary.
+const maskByte = 0
+
+// mask builds x.masked (Decision D): only text outside code spans and images
+// survives, so code, autolinks, raw HTML, link destinations and markup
+// delimiters are masked. It records every mgmt:ignore comment on the way.
 func (x *extractor) mask(doc ast.Node) {
 	x.masked = make([]byte, len(x.src))
 	for i, c := range x.src {
 		if c == '\n' {
 			x.masked[i] = '\n'
 		} else {
-			x.masked[i] = ' '
+			x.masked[i] = maskByte
 		}
 	}
 	_ = ast.Walk(doc, func(n ast.Node, entering bool) (ast.WalkStatus, error) {
@@ -126,7 +130,7 @@ func (x *extractor) mask(doc ast.Node) {
 			return ast.WalkContinue, nil
 		}
 		switch n := n.(type) {
-		case *ast.CodeSpan, *ast.FencedCodeBlock, *ast.CodeBlock:
+		case *ast.CodeSpan, *ast.FencedCodeBlock, *ast.CodeBlock, *ast.Image:
 			return ast.WalkSkipChildren, nil
 		case *ast.Text:
 			copy(x.masked[n.Segment.Start:n.Segment.Stop], x.src[n.Segment.Start:n.Segment.Stop])
@@ -230,7 +234,12 @@ func (x *extractor) block(n ast.Node) {
 		} else {
 			end += start
 		}
-		x.line(start, end, action && i == 0, done)
+		isAction := action && i == 0
+		if isAction {
+			// The checkbox is markup too; scan from just after it.
+			start += len(checkboxRe.Find(x.src[start:end]))
+		}
+		x.line(start, end, isAction, done)
 	}
 }
 
@@ -283,7 +292,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 	}
 
 	lineNo := x.lineOf(start)
-	txt := recordText(string(x.src[start:end]), toks, isAction)
+	txt := recordText(string(x.src[start:end]), toks)
 	date := fmtDate(entry)
 
 	if isAction {
@@ -371,19 +380,16 @@ func (x *extractor) count() {
 	}
 }
 
-// recordText applies Decision A to a line (markers before it already cut).
-func recordText(line string, toks []RawToken, isAction bool) string {
+// recordText applies Decision A to a line from the original source; list,
+// blockquote and checkbox markers are already cut.
+func recordText(line string, toks []RawToken) string {
 	b := []byte(line)
 	for _, t := range toks {
 		for i := t.Start; i < t.End; i++ {
 			b[i] = ' '
 		}
 	}
-	s := string(b)
-	if isAction {
-		s = checkboxRe.ReplaceAllString(s, "")
-	}
-	s = ignoreRe.ReplaceAllString(s, "")
+	s := ignoreRe.ReplaceAllString(string(b), "")
 	return strings.Join(strings.Fields(s), " ")
 }
 

@@ -155,6 +155,11 @@ func TestMaskedRegions(t *testing.T) {
 		"- spaced [link](<https://x/ +ownership>)\n" +
 		"- note <!-- +ownership --> done\n" +
 		"- mail a@b.com and https://x/@foo\n" +
+		"- a `cfg`-planning approach\n" +
+		"- see [doc](u)-planning\n" +
+		"- *x*+ownership\n" +
+		"- the **ownership**-related work\n" +
+		"- pic ![+ownership](img.png)\n" +
 		"\n" +
 		"<!-- +ownership -->\n"
 	got := extractOne(t, "notes/2026-W43.md", src)
@@ -164,6 +169,13 @@ func TestMaskedRegions(t *testing.T) {
 	}
 	if len(got.Diagnostics) != 0 {
 		t.Errorf("diagnostics = %+v", got.Diagnostics)
+	}
+	// "-related" after emphasis resolves to nothing, so check that it isn't
+	// even a token (Task 6 would report it as token-unknown).
+	x := newExtractor(load.NoteFile{Path: "notes/2026-W43.md", Source: []byte("- the **ownership**-related work\n")}, NewIndex(nil), &facts.Facts{})
+	x.run()
+	if toks := ScanLine(string(x.masked)); len(toks) != 0 {
+		t.Errorf("tokens after emphasis = %+v", toks)
 	}
 }
 
@@ -189,5 +201,25 @@ func TestMultipleTokensOneLine(t *testing.T) {
 	}
 	if got.Sections[0].TokenCount != 2 {
 		t.Errorf("tokenCount = %d", got.Sections[0].TokenCount)
+	}
+}
+
+func TestActionLines(t *testing.T) {
+	src := "## Sam\n- [x] closed it ~planning\n  then +ownership after\n- [ ]  @sam spaced out\n"
+	got := extractOne(t, "notes/2026-W43.md", src)
+	if len(got.Actions) != 2 {
+		t.Fatalf("actions = %+v", got.Actions)
+	}
+	a := got.Actions[0]
+	if !a.Done || a.Text != "closed it" || a.Line != 2 || !reflect.DeepEqual(a.Addresses, []string{"collab.planning"}) {
+		t.Errorf("closed action = %+v", a)
+	}
+	if b := got.Actions[1]; b.Done || b.Owner != "sam" || b.Text != "spaced out" {
+		t.Errorf("open action = %+v", b)
+	}
+	want := []facts.Evidence{{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Date: "2026-10-19",
+		File: "notes/2026-W43.md", Line: 3, Text: "then after"}}
+	if !reflect.DeepEqual(got.Evidence, want) {
+		t.Errorf("continuation evidence = %+v", got.Evidence)
 	}
 }
