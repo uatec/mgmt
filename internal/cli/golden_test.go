@@ -28,6 +28,7 @@ func TestGolden(t *testing.T) {
 		{"errors", []string{"lint"}, 2, "lint.txt", ""},
 		{"errors", []string{"lint", "--format", "json"}, 2, "lint.json", ""},
 		{"schema-errors", []string{"lint"}, 2, "lint.txt", ""},
+		{"warnings", []string{"lint", "--strict"}, 1, "lint.txt", ""},
 	}
 	for _, r := range rows {
 		t.Run(r.fixture+"/"+r.golden, func(t *testing.T) {
@@ -72,16 +73,18 @@ func TestLintStrictAndOut(t *testing.T) {
 	root := filepath.Join("..", "..", "testdata", "spec-example")
 	out := filepath.Join(dir, "lint.txt")
 	var stdout, stderr bytes.Buffer
-	if code := Run([]string{"--now", "2026-10-21", "--out", out, "lint", "--strict"}, root, &stdout, &stderr); code != 0 {
+	// spec-example has warnings only: --strict turns them into exit 1.
+	if code := Run([]string{"--now", "2026-10-21", "--out", out, "lint", "--strict"}, root, &stdout, &stderr); code != 1 {
 		t.Fatalf("exit = %d, stderr %s", code, stderr.String())
 	}
 	if stdout.Len() != 0 {
 		t.Errorf("stdout should be empty with --out, got %q", stdout.String())
 	}
 	b, err := os.ReadFile(out)
-	if err != nil || string(b) != "no problems\n" {
-		t.Errorf("out file = %q, %v", b, err)
+	if err != nil {
+		t.Fatal(err)
 	}
+	compare(t, filepath.Join(root, "golden", "lint.txt"), b)
 }
 
 func TestUsageErrors(t *testing.T) {

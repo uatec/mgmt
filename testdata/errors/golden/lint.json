@@ -92,5 +92,206 @@
       "severity": "error"
     }
   ],
-  "warnings": []
+  "warnings": [
+    {
+      "file": "notes/2026-W43.md",
+      "id": "action-no-due",
+      "line": 7,
+      "message": "action \"write up the incident\" has no due date",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "jo: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "jo",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "jo: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "jo",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "jo: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "jo",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "priya: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "priya: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "priya: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "sam: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "sam: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/cycles/ensek-2026-h2.yaml",
+      "id": "cycle-input-missing",
+      "line": 1,
+      "message": "sam: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "competency-untouched",
+      "line": 1,
+      "message": "sam: required competency collab.planning never touched; nothing in the last 42 days",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "competency-untouched",
+      "line": 1,
+      "message": "sam: required competency scope.crossteam never touched; nothing in the last 42 days",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 1,
+      "message": "sam: gap collab.planning (unproven) has no open action addressing it",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 1,
+      "message": "sam: gap delivery.ownership (unproven) has no open action addressing it",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 1,
+      "message": "sam: gap scope.crossteam (unproven) has no open action addressing it",
+      "person": "sam",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "competency-untouched",
+      "line": 12,
+      "message": "priya: required competency delivery.ownership never touched; nothing in the last 42 days",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 12,
+      "message": "priya: gap delivery.ownership (unproven) has no open action addressing it",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "oneonone-overdue",
+      "line": 12,
+      "message": "no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d)",
+      "person": "priya",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "oneonone-overdue",
+      "line": 23,
+      "message": "no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)",
+      "person": "jo",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "competency-untouched",
+      "line": 34,
+      "message": "alex: required competency delivery.ownership never touched; nothing in the last 42 days",
+      "person": "alex",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 34,
+      "message": "alex: gap delivery.ownership (unproven) has no open action addressing it",
+      "person": "alex",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "oneonone-overdue",
+      "line": 34,
+      "message": "no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d)",
+      "person": "alex",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "competency-untouched",
+      "line": 45,
+      "message": "alexander: required competency delivery.ownership never touched; nothing in the last 42 days",
+      "person": "alexander",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "gap-unaddressed",
+      "line": 45,
+      "message": "alexander: gap delivery.ownership (unproven) has no open action addressing it",
+      "person": "alexander",
+      "severity": "warning"
+    },
+    {
+      "file": "resources/people.yaml",
+      "id": "oneonone-overdue",
+      "line": 45,
+      "message": "no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d)",
+      "person": "alexander",
+      "severity": "warning"
+    }
+  ]
 }

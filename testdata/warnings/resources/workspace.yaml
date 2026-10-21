@@ -1,0 +1,8 @@
+apiVersion: mgmt/v1alpha1
+kind: Workspace
+metadata:
+  name: default
+spec:
+  notes: notes/**/*.md
+  me: [me]
+  oneToOneCadence: 14d

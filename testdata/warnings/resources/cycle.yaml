@@ -1,0 +1,15 @@
+apiVersion: mgmt/v1alpha1
+kind: ReviewCycle
+metadata:
+  name: autumn
+spec:
+  framework: eng
+  period: { from: 2026-07-01, to: 2026-10-31 }
+  selector:
+    people: [sam, priya, jo]
+  inputs:
+    - name: self-assessment
+      required: true
+  milestones:
+    - { name: peer-nominations, due: 2026-10-27 }
+    - { name: manager-draft,    due: 2026-11-01 }

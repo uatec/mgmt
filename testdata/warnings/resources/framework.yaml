@@ -1,0 +1,24 @@
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
+  name: eng
+spec:
+  competencies:
+    - id: delivery.ownership
+      title: Owns outcomes end to end
+      tokens: [ownership, own]
+    - id: collab.planning
+      title: Contributes actively to planning and refinement
+      tokens: [planning, plan]
+    - id: scope.crossteam
+      title: Delivers work that spans teams
+      tokens: [crossteam, xteam]
+  roles:
+    - name: platform-engineer
+      levels:
+        - name: L2
+          expects: [delivery.ownership]
+        - name: L3
+          inherits: L2
+          expects: [collab.planning, scope.crossteam]
+          removes: []           # optional: drop an inherited expectation
