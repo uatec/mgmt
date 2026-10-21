@@ -1,0 +1,23 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: alex
+spec:
+  displayName: Alex Example
+  aliases: [Alex]               # names that resolve to this person in notes
+  framework: eng
+  role: engineer
+  level: L2
+  since: 2026-09-01             # when you started managing them
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: robin
+spec:
+  displayName: Robin Example
+  aliases: [Robin]
+  framework: eng
+  role: engineer
+  level: L1
+  since: 2026-09-01

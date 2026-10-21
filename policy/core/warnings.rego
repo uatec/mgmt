@@ -47,8 +47,7 @@ warn contains f if {
 # --- negative-unaddressed -------------------------------------------------
 
 _addresses_since(p, c, date) if {
-	some a in _actions
-	a.person == p
+	some a in derive.actions_by[p]
 	c in a.addresses
 	a.date >= date
 }
@@ -122,11 +121,15 @@ warn contains f if {
 # two separate actions.
 _action_key(a) := [a.person, regex.replace(lower(trim_space(a.text)), `\s+`, " ")]
 
+_open_by_key[_action_key(a)] contains i if {
+	some i, a in _actions
+	_open(a)
+}
+
 warn contains f if {
 	some a in _actions
 	_open(a)
-	key := _action_key(a)
-	n := count([b | some b in _actions; _open(b); _action_key(b) == key])
+	n := count(_open_by_key[_action_key(a)])
 	n > 1
 	f := lib.finding("action-duplicate", a.person, a.file, a.line, sprintf("open action %q appears %d times", [a.text, n]))
 }
@@ -138,7 +141,7 @@ _cadence(p) := object.get(_persons[p], ["spec", "oneToOneCadence"], object.get(_
 warn contains f if {
 	some p in object.keys(_persons)
 	cadence := _cadence(p)
-	dates := {s.date | some s in object.get(input, "sections", []); s.person == p}
+	dates := {s.date | some s in derive.sections_by[p]}
 	count(dates) > 0
 	latest := max(dates)
 	latest < lib.add_days(_now, 0 - lib.days(cadence))
@@ -153,10 +156,7 @@ warn contains f if {
 	f := _at("Person", p, "oneonone-overdue", p, sprintf("no 1:1 section for %s at all; managed since %s (cadence %s)", [p, person.spec.since, cadence]))
 }
 
-_has_section(p) if {
-	some s in object.get(input, "sections", [])
-	s.person == p
-}
+_has_section(p) if count(derive.sections_by[p]) > 0
 
 # --- cycle-input-missing --------------------------------------------------
 

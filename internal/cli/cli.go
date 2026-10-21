@@ -24,6 +24,7 @@ import (
 const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
 
 commands:
+  init                                 scaffold a new workspace here (never overwrites)
   facts                                print the facts document as JSON
   lint [--strict] [--format text|json] print errors and warnings
   prep <person> [--cycle NAME]         print the 1:1 prep sheet
@@ -55,6 +56,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	var buf bytes.Buffer
 	var code int
 	switch rest[0] {
+	case "init":
+		code = runInit(rest[1:], root, &buf, stderr)
 	case "facts":
 		code = runFacts(rest[1:], root, *now, &buf, stderr)
 	case "lint":

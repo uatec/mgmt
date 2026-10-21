@@ -1,0 +1,20 @@
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
+  name: eng
+spec:
+  competencies:
+    - id: delivery.ownership
+      title: Owns outcomes end to end
+      tokens: [ownership, own]
+    - id: collab.planning
+      title: Contributes actively to planning and refinement
+      tokens: [planning, plan]
+  roles:
+    - name: engineer
+      levels:
+        - name: L1
+          expects: [delivery.ownership]
+        - name: L2
+          inherits: L1
+          expects: [collab.planning]

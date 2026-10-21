@@ -166,7 +166,17 @@ _removed_between(levels, inherits, reach, k, c) if {
 
 # --- evidence -------------------------------------------------------------
 
-_evidence_for(p, c) := [e | some e in object.get(input, "evidence", []); e.person == p; e.competency == c]
+# Per-person indexes over the input records, built once so the rules below
+# do not rescan every record for every person and competency.
+evidence_by[p] := [e | some e in object.get(input, "evidence", []); e.person == p] if some p in object.keys(_persons)
+
+touches_by[p] := [t | some t in object.get(input, "touches", []); t.person == p] if some p in object.keys(_persons)
+
+actions_by[p] := [a | some a in object.get(input, "actions", []); a.person == p] if some p in object.keys(_persons)
+
+sections_by[p] := [s | some s in object.get(input, "sections", []); s.person == p] if some p in object.keys(_persons)
+
+_evidence_for(p, c) := [e | some e in evidence_by[p]; e.competency == c]
 
 marks[p][c] := _sorted_by_loc([e |
 	some e in _evidence_for(p, c)
@@ -244,14 +254,13 @@ gaps[p] := [g |
 last_touch[p][c] := max(dates) if {
 	some p, comps in competencies
 	some c in object.keys(comps)
-	records := array.concat(_evidence_for(p, c), [t | some t in object.get(input, "touches", []); t.person == p; t.competency == c])
+	records := array.concat(_evidence_for(p, c), [t | some t in touches_by[p]; t.competency == c])
 	dates := {r.date | some r in records; r.date >= _since(p); r.date <= _now}
 	count(dates) > 0
 }
 
 addressed_by[p][c] := _sorted_by_loc([a |
-	some a in object.get(input, "actions", [])
-	a.person == p
+	some a in actions_by[p]
 	c in a.addresses
 ]) if {
 	some p, comps in competencies

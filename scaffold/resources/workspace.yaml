@@ -1,0 +1,9 @@
+apiVersion: mgmt/v1alpha1
+kind: Workspace
+metadata:
+  name: default
+spec:
+  notes: notes/**/*.md          # glob, relative to the workspace root
+  me: [me]                      # tokens meaning you (the manager) in actions
+  defaultWindow: 90d            # evidence window when no ReviewCycle is active
+  oneToOneCadence: 14d          # default, overridable per Person

@@ -1,0 +1,20 @@
+apiVersion: mgmt/v1alpha1
+kind: ReviewCycle
+metadata:
+  name: example-2026-h2
+spec:
+  framework: eng
+  period: { from: 2026-07-01, to: 2026-12-31 }
+  selector:
+    people: [alex, robin]
+  evidence:
+    minPerCompetency: 1
+    negativeOverrides: true
+  inputs:
+    - name: self-assessment
+      required: true
+  milestones:
+    - { name: manager-draft, due: 2026-12-01 }
+    - { name: conversations, due: 2026-12-15 }
+  outcomes:
+    ratings: [below, meets, exceeds]

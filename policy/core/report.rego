@@ -43,8 +43,7 @@ _person(p) := {
 # Open actions, overdue first, then by due date, then undated; ties by
 # file and line.
 _open_actions(p, mine) := _by_key([[[_due_key(a.due), a.file, a.line], object.union(a, {"overdue": _overdue(a.due)})] |
-	some a in object.get(input, "actions", [])
-	a.person == p
+	some a in derive.actions_by[p]
 	not a.done
 	equal(a.owner, "me") == mine
 ])
@@ -59,7 +58,7 @@ _overdue(due) := true if {
 } else := false
 
 _last_section(p) := max(dates) if {
-	dates := {s.date | some s in object.get(input, "sections", []); s.person == p; s.date < _now}
+	dates := {s.date | some s in derive.sections_by[p]; s.date < _now}
 	count(dates) > 0
 } else := null
 
@@ -67,8 +66,8 @@ _last_section(p) := max(dates) if {
 # there was none) up to now.
 _since_items(p, last) := _by_key([[[i.date, i.file, i.line, i.kind, i.competency], i] |
 	some i in array.concat(
-		[_item("mark", e.polarity, e) | some e in object.get(input, "evidence", []); e.person == p],
-		[_item("touch", 0, t) | some t in object.get(input, "touches", []); t.person == p],
+		[_item("mark", e.polarity, e) | some e in derive.evidence_by[p]],
+		[_item("touch", 0, t) | some t in derive.touches_by[p]],
 	)
 	_after(i.date, last, _since(p))
 	i.date <= _now
