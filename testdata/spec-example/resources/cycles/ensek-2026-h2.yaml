@@ -1,0 +1,30 @@
+apiVersion: mgmt/v1alpha1
+kind: ReviewCycle
+metadata:
+  name: ensek-2026-h2
+spec:
+  framework: eng
+  period: { from: 2026-04-01, to: 2026-09-30 }    # evidence window
+  selector:
+    people: [sam, priya, jo]     # or matchRoles: [platform-engineer]
+  evidence:
+    minPerCompetency: 1
+    negativeOverrides: true
+  inputs:                        # external inputs, ticked off as received
+    - name: self-assessment
+      source: leapsome
+      required: true
+    - name: peer-feedback
+      source: leapsome
+      minCount: 3
+    - name: okrs
+      required: true
+  milestones:
+    - { name: peer-nominations, due: 2026-10-27 }
+    - { name: peer-feedback,    due: 2026-11-07 }
+    - { name: manager-draft,    due: 2026-11-14 }
+    - { name: calibration,      due: 2026-11-21 }
+    - { name: conversations,    due: 2026-11-28 }
+  outcomes:
+    ratings: [below, meets, exceeds]
+    promotionNomination: true

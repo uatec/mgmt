@@ -5,6 +5,7 @@ go 1.26
 require (
 	cuelang.org/go v0.17.1
 	github.com/bmatcuk/doublestar/v4 v4.10.3
+	github.com/yuin/goldmark v1.8.2
 	sigs.k8s.io/yaml v1.6.0
 )
 
