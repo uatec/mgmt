@@ -240,6 +240,23 @@ func TestGlobalFlagsAfterCommand(t *testing.T) {
 	}
 }
 
+// TestOutFileMode: reports carry personal data, so a new --out file is
+// readable by its owner only.
+func TestOutFileMode(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "prep.md")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"--now", "2026-10-21", "--out", out, "prep", "sam"}, filepath.Join("..", "..", "testdata", "team"), &stdout, &stderr); code != 0 {
+		t.Fatalf("exit = %d, stderr %s", code, stderr.String())
+	}
+	st, err := os.Stat(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Mode().Perm() != 0o600 {
+		t.Errorf("mode = %v, want -rw-------", st.Mode().Perm())
+	}
+}
+
 func TestUsageErrors(t *testing.T) {
 	root := filepath.Join("..", "..", "testdata", "spec-example")
 	for _, args := range [][]string{

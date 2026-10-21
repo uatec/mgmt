@@ -92,7 +92,7 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	if !filepath.IsAbs(path) {
 		path = filepath.Join(root, path)
 	}
-	if err := os.WriteFile(path, buf.Bytes(), 0o644); err != nil {
+	if err := os.WriteFile(path, buf.Bytes(), 0o600); err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
 		return 2
 	}
