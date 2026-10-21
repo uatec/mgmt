@@ -1,0 +1,12 @@
+apiVersion: mgmt/v1alpha1
+metadata:
+  name: nokind
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata: {}
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: fine

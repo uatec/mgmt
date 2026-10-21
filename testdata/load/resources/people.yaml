@@ -1,0 +1,17 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: sam
+spec:
+  team: platform
+  since: 2026-05-01
+  period: { from: 2026-04-01, to: 2026-09-30 }
+  aliases:
+    - Sammy
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: priya
+spec:
+  framework: eng

@@ -1,0 +1,9 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: sam
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: priya

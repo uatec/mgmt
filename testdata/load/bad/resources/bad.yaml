@@ -1,0 +1,13 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: ok
+---
+kind: Person
+metadata: [unclosed
+  name: broken
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: after
