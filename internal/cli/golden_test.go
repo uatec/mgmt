@@ -205,6 +205,41 @@ func TestPrepOut(t *testing.T) {
 	compare(t, filepath.Join(root, "golden", "prep-sam.md"), b)
 }
 
+// TestGlobalFlagsAfterCommand: --now and --out are accepted after the
+// subcommand too, in either "--flag value" or "--flag=value" form.
+func TestGlobalFlagsAfterCommand(t *testing.T) {
+	for _, tc := range []struct {
+		fixture string
+		args    []string
+		exit    int
+		golden  string
+	}{
+		{"team", []string{"review", "sam", "--out", "OUT", "--now", "2026-10-21"}, 0, "review-sam.md"},
+		{"team", []string{"prep", "--now=2026-10-21", "sam", "--out=OUT"}, 0, "prep-sam.md"},
+		{"spec-example", []string{"lint", "--now", "2026-10-21", "--strict", "--out", "OUT"}, 1, "lint.txt"},
+		{"spec-example", []string{"--now", "1999-01-01", "lint", "-now", "2026-10-21", "-out", "OUT"}, 0, "lint.txt"},
+	} {
+		root := filepath.Join("..", "..", "testdata", tc.fixture)
+		out := filepath.Join(t.TempDir(), "out")
+		args := make([]string, len(tc.args))
+		for i, a := range tc.args {
+			args[i] = strings.Replace(a, "OUT", out, 1)
+		}
+		var stdout, stderr bytes.Buffer
+		if code := Run(args, root, &stdout, &stderr); code != tc.exit {
+			t.Fatalf("%v: exit = %d, want %d; stderr %s", tc.args, code, tc.exit, stderr.String())
+		}
+		if stdout.Len() != 0 {
+			t.Errorf("%v: stdout should be empty with --out, got %q", tc.args, stdout.String())
+		}
+		b, err := os.ReadFile(out)
+		if err != nil {
+			t.Fatalf("%v: %v", tc.args, err)
+		}
+		compare(t, filepath.Join(root, "golden", tc.golden), b)
+	}
+}
+
 func TestUsageErrors(t *testing.T) {
 	root := filepath.Join("..", "..", "testdata", "spec-example")
 	for _, args := range [][]string{
@@ -212,6 +247,9 @@ func TestUsageErrors(t *testing.T) {
 		{"bogus"},
 		{"--now", "21/10/2026", "lint"},
 		{"lint", "--format", "xml"},
+		{"lint", "--now"},
+		{"lint", "--now", "21/10/2026"},
+		{"prep", "sam", "--out"},
 		{"lint", "extra"},
 		{"prep"},
 		{"prep", "sam", "extra"},

@@ -22,6 +22,7 @@ import (
 )
 
 const usage = `usage: mgmt [--now YYYY-MM-DD] [--out FILE] <command> [args]
+       (--now and --out may also follow the command)
 
 commands:
   init                                 scaffold a new workspace here (never overwrites)
@@ -46,12 +47,17 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	if err := global.Parse(args); err != nil {
 		return usageError(stderr, err.Error())
 	}
-	if _, err := time.Parse("2006-01-02", *now); err != nil {
-		return usageError(stderr, fmt.Sprintf("--now %q is not a YYYY-MM-DD date", *now))
-	}
 	rest := global.Args()
 	if len(rest) == 0 {
 		return usageError(stderr, "no command given")
+	}
+	sub, err := hoistGlobals(rest[1:], global)
+	if err != nil {
+		return usageError(stderr, rest[0]+": "+err.Error())
+	}
+	rest = append([]string{rest[0]}, sub...)
+	if _, err := time.Parse("2006-01-02", *now); err != nil {
+		return usageError(stderr, fmt.Sprintf("--now %q is not a YYYY-MM-DD date", *now))
 	}
 	var buf bytes.Buffer
 	var code int
@@ -91,6 +97,32 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		return 2
 	}
 	return code
+}
+
+// hoistGlobals removes the global flags (--now, --out; "-" or "--", with the
+// value as the next argument or after "=") from a subcommand's arguments and
+// sets them on global, so they work after the subcommand too. A later
+// occurrence overrides an earlier one.
+func hoistGlobals(args []string, global *flag.FlagSet) ([]string, error) {
+	var rest []string
+	for i := 0; i < len(args); i++ {
+		name, value, hasValue := strings.Cut(strings.TrimPrefix(strings.TrimPrefix(args[i], "-"), "-"), "=")
+		if !strings.HasPrefix(args[i], "-") || (name != "now" && name != "out") {
+			rest = append(rest, args[i])
+			continue
+		}
+		if !hasValue {
+			if i+1 >= len(args) {
+				return nil, fmt.Errorf("flag needs an argument: -%s", name)
+			}
+			i++
+			value = args[i]
+		}
+		if err := global.Set(name, value); err != nil {
+			return nil, err
+		}
+	}
+	return rest, nil
 }
 
 func usageError(stderr io.Writer, msg string) int {
