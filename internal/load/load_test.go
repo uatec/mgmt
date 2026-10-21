@@ -2,6 +2,7 @@ package load
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -146,5 +147,17 @@ func TestParseDocsIgnoreComments(t *testing.T) {
 	want := []string{"competency-untouched", "gap-unaddressed", "oneonone-overdue"}
 	if strings.Join(res[1].Ignores, ",") != strings.Join(want, ",") || res[1].Line != 6 {
 		t.Errorf("jo ignores = %v line %d, want %v line 6", res[1].Ignores, res[1].Line, want)
+	}
+}
+
+func TestSplitDocsSeparatorVariants(t *testing.T) {
+	src := "kind: Person\nmetadata:\n  name: a\n--- \nkind: Person\nmetadata:\n  name: b\n--- # next\nkind: Person\nmetadata:\n  name: c\n---\t\nkind: Person\nmetadata:\n  name: d\n"
+	res, _ := parseDocs("resources/p.yaml", []byte(src))
+	var got []string
+	for _, r := range res {
+		got = append(got, r.Name+"@"+strconv.Itoa(r.Line))
+	}
+	if strings.Join(got, ",") != "a@1,b@5,c@9,d@13" {
+		t.Errorf("docs = %v, want a@1,b@5,c@9,d@13", got)
 	}
 }

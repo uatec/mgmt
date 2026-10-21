@@ -30,6 +30,9 @@ type Resource struct {
 var (
 	timestampRE = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T00:00:00Z$`)
 	ignoreRE    = regexp.MustCompile(`(?:^|\s)#\s*mgmt:ignore\s+(.*?)\s*$`)
+	// docStartRE is a YAML document start: "---" alone or followed by
+	// whitespace and optionally a comment.
+	docStartRE = regexp.MustCompile(`^---(?:\s.*)?$`)
 )
 
 // LoadResources reads resources/**/*.{yaml,yml} under root, sorted by path then
@@ -72,7 +75,8 @@ type doc struct {
 	text string
 }
 
-// splitDocs strips a BOM and CRs, then splits on lines that are exactly "---".
+// splitDocs strips a BOM and CRs, then splits on document-start lines ("---",
+// optionally followed by whitespace or a comment).
 func splitDocs(src []byte) []doc {
 	src = bytes.TrimPrefix(src, []byte("\xef\xbb\xbf"))
 	text := strings.ReplaceAll(string(src), "\r\n", "\n")
@@ -84,7 +88,7 @@ func splitDocs(src []byte) []doc {
 		docs = append(docs, doc{line: start, text: strings.Join(cur, "\n")})
 	}
 	for i, l := range strings.Split(text, "\n") {
-		if l == "---" {
+		if docStartRE.MatchString(l) {
 			flush()
 			cur, start = nil, i+2
 			continue
