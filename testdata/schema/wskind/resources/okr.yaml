@@ -1,0 +1,12 @@
+apiVersion: mgmt/v1alpha1
+kind: OKRSet
+metadata:
+  name: sam-h2
+spec:
+  person: sam
+  cycle: ensek-2026-h2
+  objectives:
+    - title: Ship CDN
+      keyResults:
+        - title: p95 under 200ms
+          competencies: [delivery.ownership]
