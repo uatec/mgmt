@@ -72,6 +72,9 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		msg   string // substring of the message; "" checks only that it's set
 	}{
 		{"bad date", map[string]string{"b.yaml": strings.Replace(person(""), "2026-05-01", "2026-5-1", 1)}, "resources/b.yaml", 1, ""},
+		{"impossible since", map[string]string{"b.yaml": strings.Replace(person(""), "2026-05-01", "2026-09-31", 1)}, "resources/b.yaml", 1, "since"},
+		{"impossible period", map[string]string{"b.yaml": strings.Replace(cycle("1"), "2026-09-30", "2026-02-29", 1)}, "resources/b.yaml", 1, "period.to"},
+		{"impossible milestone due", map[string]string{"b.yaml": cycle("1") + "  milestones:\n    - {name: m, due: 2026-11-31}\n"}, "resources/b.yaml", 1, "due"},
 		{"unknown field", map[string]string{"b.yaml": person("  colour: red\n")}, "resources/b.yaml", 1, ""},
 		{"wrong apiVersion", map[string]string{"b.yaml": strings.Replace(person(""), "mgmt/v1alpha1", "mgmt/v2", 1)}, "resources/b.yaml", 1, ""},
 		{"min zero", map[string]string{"b.yaml": cycle("0")}, "resources/b.yaml", 1, ""},

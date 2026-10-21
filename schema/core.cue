@@ -1,6 +1,9 @@
 package mgmt
 
-#Date:     =~"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+import "time"
+
+// #Date is a real calendar date written YYYY-MM-DD (2026-09-31 is rejected).
+#Date:     =~"^[0-9]{4}-[0-9]{2}-[0-9]{2}$" & time.Format("2006-01-02")
 #Duration: =~"^[0-9]+[dw]$"
 
 #CompetencyID: =~"^[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*$"

@@ -1,0 +1,10 @@
+apiVersion: mgmt/v1alpha1
+kind: ReviewCycle
+metadata:
+  name: autumn
+spec:
+  framework: eng
+  period: {from: 2026-07-01, to: 2026-10-31}
+  selector: {people: [sam]}
+  milestones:
+    - {name: manager-draft, due: 2026-11-31}

@@ -15,6 +15,7 @@ import (
 
 	"cuelang.org/go/cue"
 	"cuelang.org/go/cue/cuecontext"
+	cerrors "cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/load"
 
 	"github.com/uatec/mgmt/internal/facts"
@@ -144,6 +145,23 @@ func firstLine(s string) string {
 	return s
 }
 
+// cueMessage is the first line of a validation error. When that is only a
+// disjunction summary ("N errors in empty disjunction"), as for a defaulted
+// list such as milestones, the most deeply nested error is more useful.
+func cueMessage(err error) string {
+	msg := firstLine(err.Error())
+	if !strings.Contains(msg, "empty disjunction") {
+		return msg
+	}
+	depth := 0
+	for _, e := range cerrors.Errors(err) {
+		if d := len(e.Path()); d > depth {
+			depth, msg = d, firstLine(e.Error())
+		}
+	}
+	return msg
+}
+
 func invalid(file string, line int, msg string) facts.Finding {
 	return facts.Finding{Severity: "error", ID: "schema-invalid", File: file, Line: line, Message: msg}
 }
@@ -184,7 +202,7 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 		}
 		v := def.Unify(ctx.Encode(intify(r.Object)))
 		if err := v.Validate(cue.Concrete(true)); err != nil {
-			finds = append(finds, invalid(r.File, r.Line, strings.TrimPrefix(firstLine(err.Error()), "#"+r.Kind+".")))
+			finds = append(finds, invalid(r.File, r.Line, strings.TrimPrefix(cueMessage(err), "#"+r.Kind+".")))
 			continue
 		}
 		// Workspaces are already limited to one above.

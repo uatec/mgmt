@@ -14,3 +14,14 @@ kind: Persn
 metadata:
   name: priya
 spec: {}
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: jo
+spec:
+  aliases: [Jo]
+  framework: eng
+  role: platform-engineer
+  level: L3
+  since: 2026-09-31

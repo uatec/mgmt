@@ -1,3 +1,5 @@
+resources/cycle.yaml:1: error schema-invalid: spec.milestones.0.due: invalid value "2026-11-31" (does not satisfy time.Format("2006-01-02")): invalid time "2026-11-31"
 resources/people.yaml:1: error schema-invalid: spec.since: invalid value "1 May 2026" (out of bound =~"^[0-9]{4}-[0-9]{2}-[0-9]{2}$")
 resources/people.yaml:12: error schema-invalid: no schema for kind Persn
-2 errors, 0 warnings
+resources/people.yaml:18: error schema-invalid: spec.since: invalid value "2026-09-31" (does not satisfy time.Format("2006-01-02")): invalid time "2026-09-31"
+4 errors, 0 warnings
