@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -14,26 +16,48 @@ import (
 	"github.com/uatec/mgmt/internal/facts"
 )
 
-// TestRegoUnit runs every policy/core/*_test.rego through OPA's tester.
+// TestRegoUnit runs every policy/core/*_test.rego, and every fixture
+// workspace's testdata/*/policy/**/*_test.rego, through OPA's tester with
+// the core modules and all fixture workspace modules loaded together.
 func TestRegoUnit(t *testing.T) {
 	mods := map[string]*ast.Module{}
-	err := fs.WalkDir(mgmt.CorePolicy, "policy/core", func(p string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(p, ".rego") {
-			return err
-		}
-		src, err := fs.ReadFile(mgmt.CorePolicy, p)
-		if err != nil {
-			return err
-		}
-		m, err := ast.ParseModuleWithOpts(p, string(src), ast.ParserOptions{RegoVersion: ast.RegoV1})
-		if err != nil {
-			return err
-		}
-		mods[p] = m
-		return nil
-	})
+	add := func(fsys fs.FS, root, prefix string) error {
+		return fs.WalkDir(fsys, root, func(p string, d fs.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(p, ".rego") {
+				return err
+			}
+			src, err := fs.ReadFile(fsys, p)
+			if err != nil {
+				return err
+			}
+			m, err := ast.ParseModuleWithOpts(prefix+p, string(src), ast.ParserOptions{RegoVersion: ast.RegoV1})
+			if err != nil {
+				return err
+			}
+			mods[prefix+p] = m
+			return nil
+		})
+	}
+	if err := add(mgmt.CorePolicy, "policy/core", ""); err != nil {
+		t.Fatal(err)
+	}
+	wsDirs, err := filepath.Glob("../../testdata/*/policy")
 	if err != nil {
 		t.Fatal(err)
+	}
+	wsTests := 0
+	for _, dir := range wsDirs {
+		if err := add(os.DirFS(dir), ".", filepath.ToSlash(dir)+"/"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for name := range mods {
+		if strings.HasPrefix(name, "../") && strings.HasSuffix(name, "_test.rego") {
+			wsTests++
+		}
+	}
+	if wsTests == 0 {
+		t.Fatal("no workspace *_test.rego found under testdata/*/policy")
 	}
 	ch, err := tester.NewRunner().RaiseBuiltinErrors(true).Run(context.Background(), mods)
 	if err != nil {
@@ -163,5 +187,46 @@ func TestRunSchemaErrorsSkipExtraction(t *testing.T) {
 	}
 	if len(res.Facts.Diagnostics) != len(res.Errors) {
 		t.Errorf("diagnostics %d != errors %d", len(res.Facts.Diagnostics), len(res.Errors))
+	}
+}
+
+// TestEvaluateDecodesConftestStrings: Conftest-style rules emitting plain
+// strings, and objects missing id or message, become findings attributed to
+// their package rather than blank lines.
+func TestEvaluateDecodesConftestStrings(t *testing.T) {
+	mod := `package mgmt.policy.acme
+deny contains "OKRs must name a cycle"
+warn contains "check the OKRs"
+warn contains {"person": "sam", "file": "f", "line": 3, "message": "no id"}
+warn contains {"id": "odd", "file": "f", "line": 4}`
+	_, _, deny, warn, err := Evaluate(facts.Facts{}, map[string]string{"acme.rego": mod})
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantDeny := []facts.Finding{{Severity: "error", ID: "acme", Message: "OKRs must name a cycle"}}
+	if !reflect.DeepEqual(deny, wantDeny) {
+		t.Errorf("deny = %+v", deny)
+	}
+	wantWarn := []facts.Finding{
+		{Severity: "warning", ID: "acme", Message: "check the OKRs"},
+		{Severity: "warning", ID: "acme", Person: "sam", File: "f", Line: 3, Message: "no id"},
+		{Severity: "warning", ID: "odd", File: "f", Line: 4, Message: `{"file":"f","id":"odd","line":4}`},
+	}
+	if !reflect.DeepEqual(warn, wantWarn) {
+		t.Errorf("warn = %+v\nwant %+v", warn, wantWarn)
+	}
+}
+
+func TestLoadModulesStatError(t *testing.T) {
+	file := filepath.Join(t.TempDir(), "file")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	// Stat of a path below a regular file fails with ENOTDIR, not ENOENT.
+	if _, err := LoadModules(mgmt.CorePolicy, filepath.Join(file, "policy")); err == nil {
+		t.Fatal("want an I/O error for an unreadable policy dir")
+	}
+	if _, err := LoadModules(mgmt.CorePolicy, file); err == nil || !strings.Contains(err.Error(), "not a directory") {
+		t.Fatalf("policy is a file: err = %v", err)
 	}
 }

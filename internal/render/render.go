@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"text/template"
 
@@ -37,6 +38,30 @@ func funcs() template.FuncMap {
 		delete(m, name)
 	}
 	return m
+}
+
+// nameRE limits report names to plain file names, so a name can't reach
+// outside reports/.
+var nameRE = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_-]*$`)
+
+// Exists reports whether report name has a workspace or core template.
+func Exists(name string, core fs.FS, wsReportsDir string) (bool, error) {
+	if !nameRE.MatchString(name) {
+		return false, nil
+	}
+	_, _, err := load(name, core, wsReportsDir)
+	var unknown *unknownError
+	if errors.As(err, &unknown) {
+		return false, nil
+	}
+	return err == nil, err
+}
+
+// unknownError: neither the workspace nor the core has the template.
+type unknownError struct{ name, wsPath string }
+
+func (e *unknownError) Error() string {
+	return fmt.Sprintf("no report %q: neither %s nor the core template exists", e.name, e.wsPath)
 }
 
 // Render executes report name over data. The template is
@@ -72,7 +97,7 @@ func load(name string, core fs.FS, wsReportsDir string) (string, string, error) 
 	corePath := "reports/" + name + ".tmpl"
 	b, err = fs.ReadFile(core, corePath)
 	if errors.Is(err, fs.ErrNotExist) {
-		return "", "", fmt.Errorf("no report %q: neither %s nor the core template exists", name, ws)
+		return "", "", &unknownError{name, ws}
 	}
 	if err != nil {
 		return "", "", err

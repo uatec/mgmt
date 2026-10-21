@@ -1,0 +1,18 @@
+apiVersion: mgmt/v1alpha1
+kind: OKRSet
+metadata:
+  name: sam-2026-h2
+spec:
+  person: sam
+  cycle: ensek-2026-h2
+  objectives:
+    - title: Move static assets onto the shared CDN
+      keyResults:
+        - three product teams serve assets from the CDN
+        - origin egress down 40%
+      competencies: [scope.crossteam]
+    - title: Own the CDN rollout end to end
+      keyResults:
+        - rollout runbook published
+        - no Sev1 incidents during the migration
+      competencies: [delivery.ownership]

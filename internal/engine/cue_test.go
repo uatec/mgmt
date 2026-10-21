@@ -156,3 +156,25 @@ func TestKinds(t *testing.T) {
 		t.Fatalf("got %v", got)
 	}
 }
+
+// TestValidateDefinitionWithoutLiteralKind: a workspace definition only
+// registers a kind when it fixes kind to its own name; otherwise the
+// resource's error says why.
+func TestValidateDefinitionWithoutLiteralKind(t *testing.T) {
+	dir := t.TempDir()
+	src := "package mgmt\n\n#Widget: #Resource & {spec: {size: int}}\n"
+	if err := os.WriteFile(filepath.Join(dir, "widget.cue"), []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ws := load.Resource{APIVersion: "mgmt/v1alpha1", Kind: "Workspace", Name: "default", File: "resources/ws.yaml", Line: 1,
+		Object: map[string]any{"apiVersion": "mgmt/v1alpha1", "kind": "Workspace", "metadata": map[string]any{"name": "default"},
+			"spec": map[string]any{"notes": "n/**/*.md", "me": []any{"me"}}}}
+	widget := load.Resource{APIVersion: "mgmt/v1alpha1", Kind: "Widget", Name: "w", File: "resources/w.yaml", Line: 3,
+		Object: map[string]any{"apiVersion": "mgmt/v1alpha1", "kind": "Widget", "metadata": map[string]any{"name": "w"},
+			"spec": map[string]any{"size": 1}}}
+	fs := Validate([]load.Resource{ws, widget}, mgmt.CoreSchema, dir)
+	want := `no schema for kind Widget: definition #Widget does not set kind: "Widget" (write #Widget: #Resource & {kind: "Widget", ...})`
+	if len(fs) != 1 || fs[0].File != "resources/w.yaml" || fs[0].Line != 3 || fs[0].Message != want {
+		t.Fatalf("got %+v", fs)
+	}
+}

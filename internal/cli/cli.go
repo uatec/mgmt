@@ -31,6 +31,8 @@ commands:
   explain <person> <competency> [--cycle NAME]
                                        explain why a competency has its status
   status [--cycle NAME]                print the team matrix and cycle conditions
+  report <name> [<person>] [--cycle NAME]
+                                       run a workspace report (reports/<name>.tmpl)
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
@@ -65,6 +67,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
 	case "status":
 		code = runReport("status", rest[1:], "", root, *now, &buf, stderr)
+	case "report":
+		code = runCustomReport(rest[1:], root, *now, &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}
@@ -152,17 +156,12 @@ func runLint(args []string, root, now string, stdout, stderr io.Writer) int {
 	return 0
 }
 
-// runReport parses "<args> [--cycle NAME]" (flags may come anywhere), runs
-// the pipeline, refuses on errors (the lint text goes to stderr), resolves
-// the person (not for status) and, for explain, the competency, and renders
-// the report.
+// runReport parses "<args> [--cycle NAME]" (flags may come anywhere) for a
+// built-in report and renders it; its view must exist.
 func runReport(name string, args []string, argUsage, root, now string, stdout, stderr io.Writer) int {
-	fl := flag.NewFlagSet(name, flag.ContinueOnError)
-	fl.SetOutput(io.Discard)
-	cycle := fl.String("cycle", "", "")
-	pos, err := parseInterspersed(fl, args)
-	if err != nil {
-		return usageError(stderr, name+": "+err.Error())
+	pos, cycle, code := parseReportArgs(name, args, stderr)
+	if code != 0 {
+		return code
 	}
 	if want := len(strings.Fields(argUsage)); len(pos) != want {
 		if argUsage == "" {
@@ -170,7 +169,50 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		}
 		return usageError(stderr, fmt.Sprintf("%s takes %s", name, argUsage))
 	}
-	opts := engine.Options{Now: now, Cycle: *cycle}
+	return renderReport(name, pos, cycle, true, root, now, stdout, stderr)
+}
+
+// runCustomReport runs "report <name> [<person>] [--cycle NAME]": any
+// workspace or core template by name. Unlike the built-in commands, its
+// view may be null (Ruling R4): custom templates can use facts and derive.
+func runCustomReport(args []string, root, now string, stdout, stderr io.Writer) int {
+	pos, cycle, code := parseReportArgs("report", args, stderr)
+	if code != 0 {
+		return code
+	}
+	if len(pos) < 1 || len(pos) > 2 {
+		return usageError(stderr, "report takes <name> [<person>]")
+	}
+	ok, err := render.Exists(pos[0], mgmt.CoreReports, filepath.Join(root, "reports"))
+	if err != nil {
+		fmt.Fprintf(stderr, "mgmt: %v\n", err)
+		return 2
+	}
+	if !ok {
+		fmt.Fprintf(stderr, "mgmt: unknown report %q\n", pos[0])
+		return 2
+	}
+	return renderReport(pos[0], pos[1:], cycle, false, root, now, stdout, stderr)
+}
+
+// parseReportArgs returns the positional arguments and --cycle; code is
+// non-zero after a usage error.
+func parseReportArgs(name string, args []string, stderr io.Writer) (pos []string, cycle string, code int) {
+	fl := flag.NewFlagSet(name, flag.ContinueOnError)
+	fl.SetOutput(io.Discard)
+	c := fl.String("cycle", "", "")
+	pos, err := parseInterspersed(fl, args)
+	if err != nil {
+		return nil, "", usageError(stderr, name+": "+err.Error())
+	}
+	return pos, *c, 0
+}
+
+// renderReport runs the pipeline, refuses on errors (the lint text goes to
+// stderr), resolves pos[0] as the person and pos[1] as a competency of
+// theirs, and renders report name. strict makes a missing view an error.
+func renderReport(name string, pos []string, cycle string, strict bool, root, now string, stdout, stderr io.Writer) int {
+	opts := engine.Options{Now: now, Cycle: cycle}
 	res, err := engine.Run(root, opts)
 	if err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
@@ -209,7 +251,7 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		}
 		keys = append(keys, id)
 	}
-	data, err := reportData(res, name, keys, opts)
+	data, err := reportData(res, name, keys, opts, strict)
 	if err != nil {
 		fmt.Fprintf(stderr, "mgmt: %v\n", err)
 		return 2
@@ -305,9 +347,10 @@ func sortedKeys[V any](m map[string]V) []string {
 }
 
 // reportData is the template data (Ruling R4): view is report[name] indexed
-// by keys (the person, then for explain the competency). A view missing for
-// those keys is an error rather than an empty report.
-func reportData(res *engine.Result, name string, keys []string, opts engine.Options) (map[string]any, error) {
+// by keys (the person, then for explain the competency). When strict, a view
+// missing for those keys is an error rather than an empty report; otherwise
+// it is null.
+func reportData(res *engine.Result, name string, keys []string, opts engine.Options, strict bool) (map[string]any, error) {
 	factsDoc, err := plainJSON(res.Facts)
 	if err != nil {
 		return nil, err
@@ -316,6 +359,9 @@ func reportData(res *engine.Result, name string, keys []string, opts engine.Opti
 	for _, k := range keys {
 		m, _ := view.(map[string]any)
 		if view = m[k]; view == nil {
+			if !strict {
+				break
+			}
 			return nil, fmt.Errorf("no %s report for %q", name, strings.Join(keys, " "))
 		}
 	}
@@ -355,7 +401,10 @@ func plainJSON(v any) (any, error) {
 }
 
 // lintText renders findings one per line, errors and warnings interleaved in
-// file, line, id, person order, followed by a summary line.
+// file, line, id, person order, followed by a summary line. A finding with no
+// file (a workspace policy emitting a plain string) prints without a
+// location, as "warning <pkg>: <message>"; one with a file but no line
+// prints "<file>: ...".
 func lintText(errs, warns []facts.Finding) string {
 	if len(errs)+len(warns) == 0 {
 		return "no problems\n"
@@ -364,7 +413,14 @@ func lintText(errs, warns []facts.Finding) string {
 	engine.SortFindings(all)
 	var b strings.Builder
 	for _, f := range all {
-		fmt.Fprintf(&b, "%s:%d: %s %s", f.File, f.Line, f.Severity, f.ID)
+		switch {
+		case f.File == "":
+		case f.Line == 0:
+			fmt.Fprintf(&b, "%s: ", f.File)
+		default:
+			fmt.Fprintf(&b, "%s:%d: ", f.File, f.Line)
+		}
+		fmt.Fprintf(&b, "%s %s", f.Severity, f.ID)
 		if f.Person != "" {
 			fmt.Fprintf(&b, " [%s]", f.Person)
 		}

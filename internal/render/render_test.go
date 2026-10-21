@@ -66,3 +66,21 @@ func TestRenderUnknownReport(t *testing.T) {
 		t.Errorf("err = %v", err)
 	}
 }
+
+func TestExists(t *testing.T) {
+	ws := t.TempDir()
+	if err := os.WriteFile(filepath.Join(ws, "okrs.tmpl"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for name, want := range map[string]bool{
+		"prep": true, "okrs": true, "nope": false, "../reports/okrs": false, "": false, "a/b": false, ".hidden": false,
+	} {
+		got, err := Exists(name, core, ws)
+		if err != nil {
+			t.Fatalf("%q: %v", name, err)
+		}
+		if got != want {
+			t.Errorf("Exists(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

@@ -1,0 +1,48 @@
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: sam
+spec:
+  displayName: Sam Example
+  aliases: [Sam, Samuel]
+  framework: eng
+  role: platform-engineer
+  level: L3
+  since: 2026-01-05
+  oneToOneCadence: 7d
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: priya
+spec:
+  displayName: Priya Example
+  aliases: [Priya]
+  framework: eng
+  role: platform-engineer
+  level: L2
+  since: 2026-01-05
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: jo
+spec:
+  displayName: Jo Example
+  aliases: [Jo]
+  framework: eng
+  role: platform-engineer
+  level: L3
+  since: 2026-05-01
+---
+apiVersion: mgmt/v1alpha1
+kind: Person
+metadata:
+  name: alex
+spec:
+  displayName: Alex Example
+  aliases: [Alex]
+  framework: eng
+  role: platform-engineer
+  level: L2
+  since: 2026-09-01

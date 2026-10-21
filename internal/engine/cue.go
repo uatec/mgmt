@@ -87,12 +87,16 @@ func build(ctx *cue.Context, core fs.FS, wsSchemaDir string) (cue.Value, error) 
 	return v, nil
 }
 
-// kindDefs maps kind name to its definition value.
-func kindDefs(v cue.Value) map[string]cue.Value {
-	out := map[string]cue.Value{}
+// kindDefs maps kind name to its definition value. A top-level definition
+// #Name registers kind Name only when its kind field is the literal "Name"
+// (as in #Name: #Resource & {kind: "Name", ...}); every other definition
+// name (helpers such as #Date, or a kind definition that forgot its kind
+// literal) is returned in others so Validate can explain the miss.
+func kindDefs(v cue.Value) (kinds map[string]cue.Value, others map[string]bool) {
+	kinds, others = map[string]cue.Value{}, map[string]bool{}
 	it, err := v.Fields(cue.Definitions(true))
 	if err != nil {
-		return out
+		return kinds, others
 	}
 	for it.Next() {
 		name := strings.TrimPrefix(it.Selector().String(), "#")
@@ -101,10 +105,12 @@ func kindDefs(v cue.Value) map[string]cue.Value {
 		}
 		k := it.Value().LookupPath(cue.ParsePath("kind"))
 		if s, err := k.String(); err == nil && s == name {
-			out[name] = it.Value()
+			kinds[name] = it.Value()
+		} else {
+			others[name] = true
 		}
 	}
-	return out
+	return kinds, others
 }
 
 // Kinds lists the resource kinds defined by the core and workspace schemas, sorted.
@@ -113,7 +119,7 @@ func Kinds(core fs.FS, wsSchemaDir string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defs := kindDefs(v)
+	defs, _ := kindDefs(v)
 	kinds := make([]string, 0, len(defs))
 	for k := range defs {
 		kinds = append(kinds, k)
@@ -142,7 +148,7 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 	if err != nil {
 		return []facts.Finding{invalid("schema", 1, "schema does not compile: "+err.Error())}
 	}
-	defs := kindDefs(schema)
+	defs, others := kindDefs(schema)
 	var finds []facts.Finding
 	seenWS := 0
 	seenName := map[string]bool{}
@@ -155,7 +161,11 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 		}
 		def, ok := defs[r.Kind]
 		if !ok || !kindNameRE.MatchString(r.Kind) {
-			finds = append(finds, invalid(r.File, r.Line, "no schema for kind "+r.Kind))
+			msg := "no schema for kind " + r.Kind
+			if others[r.Kind] && kindNameRE.MatchString(r.Kind) {
+				msg += fmt.Sprintf(": definition #%[1]s does not set kind: %[2]q (write #%[1]s: #Resource & {kind: %[2]q, ...})", r.Kind, r.Kind)
+			}
+			finds = append(finds, invalid(r.File, r.Line, msg))
 			continue
 		}
 		if r.Kind == "ReviewCycle" {

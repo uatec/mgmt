@@ -11,6 +11,7 @@ import (
 
 	mgmt "github.com/uatec/mgmt"
 	"github.com/uatec/mgmt/internal/engine"
+	"github.com/uatec/mgmt/internal/facts"
 	"github.com/uatec/mgmt/internal/render"
 )
 
@@ -64,6 +65,15 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"status", "--cycle", "nope"}, 2, "", "status-nope.stderr"},
 		{"spec-example", []string{"status"}, 0, "status.md", ""},
 		{"spec-example", []string{"--now", "2027-01-15", "status"}, 0, "status-no-cycle.md", ""},
+		{"ensek", []string{"lint"}, 0, "lint.txt", ""},
+		{"ensek", []string{"--now", "2026-11-01", "lint"}, 0, "lint-2026-11-01.txt", ""},
+		{"ensek", []string{"prep", "sam"}, 0, "prep-sam.md", ""},
+		{"ensek", []string{"report", "okrs", "sam"}, 0, "report-okrs-sam.md", ""},
+		{"ensek", []string{"report", "okrs"}, 0, "report-okrs.md", ""},
+		{"ensek", []string{"report", "okrs", "priya"}, 0, "report-okrs-priya.md", ""},
+		{"ensek", []string{"report", "okrs", "nobody"}, 2, "", "report-okrs-nobody.stderr"},
+		{"ensek", []string{"report", "okrs", "jo", "--cycle", "retro-2026-h1"}, 2, "", "report-okrs-jo-not-in-cycle.stderr"},
+		{"team", []string{"report", "okrs"}, 2, "", "report-okrs.stderr"},
 	}
 	for _, r := range rows {
 		t.Run(r.fixture+"/"+strings.Join(r.args, "_"), func(t *testing.T) {
@@ -263,11 +273,11 @@ func TestReviewNeverRates(t *testing.T) {
 // error, not an empty report.
 func TestReportDataMissingView(t *testing.T) {
 	res := &engine.Result{Report: map[string]any{"prep": map[string]any{"priya": map[string]any{}}}}
-	if _, err := reportData(res, "prep", []string{"sam"}, engine.Options{Now: "2026-10-21"}); err == nil ||
+	if _, err := reportData(res, "prep", []string{"sam"}, engine.Options{Now: "2026-10-21"}, true); err == nil ||
 		!strings.Contains(err.Error(), `no prep report for "sam"`) {
 		t.Errorf("err = %v", err)
 	}
-	if _, err := reportData(res, "prep", []string{"priya"}, engine.Options{Now: "2026-10-21"}); err != nil {
+	if _, err := reportData(res, "prep", []string{"priya"}, engine.Options{Now: "2026-10-21"}, true); err != nil {
 		t.Errorf("priya: %v", err)
 	}
 }
@@ -345,5 +355,143 @@ func TestStatusRejectsArguments(t *testing.T) {
 	}
 	if !strings.HasPrefix(stderr.String(), "mgmt: status takes no arguments\n") {
 		t.Errorf("stderr = %q", stderr.String())
+	}
+}
+
+// TestEnsekGoldenFacts pins the brief's facts in the ensek goldens, so an
+// -update cannot silently accept the wrong output.
+func TestEnsekGoldenFacts(t *testing.T) {
+	read := func(name string) string {
+		b, err := os.ReadFile(filepath.Join("..", "..", "testdata", "ensek", "golden", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	okr := regexp.MustCompile(`(?m)^.*okr-no-evidence.*$`)
+	if got := okr.FindAllString(read("lint.txt"), -1); len(got) != 0 {
+		t.Errorf("lint at 2026-10-21 has okr-no-evidence: %q", got)
+	}
+	got := okr.FindAllString(read("lint-2026-11-01.txt"), -1)
+	if len(got) != 1 || !strings.HasPrefix(got[0], "resources/okrs.yaml:1: warning okr-no-evidence [sam]: ") ||
+		!strings.Contains(got[0], "scope.crossteam") {
+		t.Errorf("lint at 2026-11-01: okr-no-evidence lines = %q, want one for scope.crossteam", got)
+	}
+	if first, _, _ := strings.Cut(read("prep-sam.md"), "\n"); first != "# Ensek 1:1 prep" {
+		t.Errorf("prep first line = %q", first)
+	}
+	for _, want := range []string{"- scope.crossteam: unproven\n", "- delivery.ownership: proven\n"} {
+		if !strings.Contains(read("report-okrs-sam.md"), want) {
+			t.Errorf("report okrs sam lacks %q", want)
+		}
+	}
+}
+
+// TestExtensionsNeedNoRebuild edits a copy of the ensek workspace between
+// runs of the same binary: workspace policies, kinds and templates are read
+// at run time.
+func TestExtensionsNeedNoRebuild(t *testing.T) {
+	src := filepath.Join("..", "..", "testdata", "ensek")
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(src)); err != nil {
+		t.Fatal(err)
+	}
+	run := func(args ...string) (string, string, int) {
+		t.Helper()
+		var stdout, stderr bytes.Buffer
+		code := Run(append([]string{"--now", "2026-11-01"}, args...), root, &stdout, &stderr)
+		return stdout.String(), stderr.String(), code
+	}
+	policyDir := filepath.Join(root, "policy", "ensek")
+	rego := filepath.Join(policyDir, "okr.rego")
+	orig, err := os.ReadFile(rego)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if out, _, _ := run("lint"); !strings.Contains(out, "okr-no-evidence") {
+		t.Fatalf("baseline lint lacks okr-no-evidence:\n%s", out)
+	}
+
+	if err := os.RemoveAll(policyDir); err != nil {
+		t.Fatal(err)
+	}
+	if out, _, _ := run("lint"); strings.Contains(out, "okr-no-evidence") {
+		t.Errorf("okr-no-evidence still reported without policy/ensek:\n%s", out)
+	}
+
+	if err := os.MkdirAll(policyDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	edited := strings.Replace(string(orig), "which is unproven", "which still needs evidence", 1)
+	if edited == string(orig) {
+		t.Fatal("policy message not found in okr.rego")
+	}
+	if err := os.WriteFile(rego, []byte(edited), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, _, _ := run("lint"); !strings.Contains(out, "links scope.crossteam, which still needs evidence") {
+		t.Errorf("edited policy message not shown:\n%s", out)
+	}
+
+	// Kinds: tighten the OKRSet schema and the resource becomes invalid.
+	cue := filepath.Join(root, "schema", "ensek", "okr.cue")
+	b, err := os.ReadFile(cue)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cue, []byte(strings.Replace(string(b), "person: string", `person: "priya"`, 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, _, code := run("lint"); code != 2 || !strings.Contains(out, "resources/okrs.yaml:1: error schema-invalid") {
+		t.Errorf("tightened schema: exit %d\n%s", code, out)
+	}
+	if err := os.WriteFile(cue, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Templates: a new report is picked up immediately.
+	if err := os.WriteFile(filepath.Join(root, "reports", "hello.tmpl"), []byte("hello {{.person}}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if out, errOut, code := run("report", "hello", "Samuel"); code != 0 || out != "hello sam\n" {
+		t.Errorf("report hello: exit %d out %q err %q", code, out, errOut)
+	}
+}
+
+func TestReportUsage(t *testing.T) {
+	root := filepath.Join("..", "..", "testdata", "ensek")
+	for _, tc := range []struct {
+		args []string
+		want string
+	}{
+		{[]string{"report"}, "mgmt: report takes <name> [<person>]\n"},
+		{[]string{"report", "okrs", "sam", "extra"}, "mgmt: report takes <name> [<person>]\n"},
+		{[]string{"report", "../okrs"}, "mgmt: unknown report \"../okrs\"\n"},
+		{[]string{"report", "nope", "sam"}, "mgmt: unknown report \"nope\"\n"},
+	} {
+		var stdout, stderr bytes.Buffer
+		if code := Run(append([]string{"--now", "2026-10-21"}, tc.args...), root, &stdout, &stderr); code != 2 {
+			t.Errorf("%v: exit = %d, want 2", tc.args, code)
+		}
+		if !strings.HasPrefix(stderr.String(), tc.want) {
+			t.Errorf("%v: stderr = %q, want prefix %q", tc.args, stderr.String(), tc.want)
+		}
+		if stdout.Len() != 0 {
+			t.Errorf("%v: stdout = %q", tc.args, stdout.String())
+		}
+	}
+}
+
+// TestLintTextWithoutLocation: Conftest-style string findings carry no file
+// and print without a location rather than as ":0:".
+func TestLintTextWithoutLocation(t *testing.T) {
+	got := lintText(
+		[]facts.Finding{{Severity: "error", ID: "acme", Message: "OKRs must name a cycle"}},
+		[]facts.Finding{{Severity: "warning", ID: "odd", File: "resources/x.yaml", Message: "m"}},
+	)
+	want := "error acme: OKRs must name a cycle\nresources/x.yaml: warning odd: m\n1 error, 1 warning\n"
+	if got != want {
+		t.Errorf("got %q\nwant %q", got, want)
 	}
 }

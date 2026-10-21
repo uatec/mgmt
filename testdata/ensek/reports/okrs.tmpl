@@ -1,0 +1,18 @@
+{{- /* Ensek OKRs: every OKRSet for the given person (every OKRSet without
+     one), each objective with its key results and the derived status of
+     each linked competency. view is null: this report reads facts and
+     derive directly. */ -}}
+{{- $sets := dig "resources" "OKRSet" (dict) .facts -}}
+{{- $n := 0 -}}
+# OKRs{{with .person}}: {{dig "resources" "Person" . "spec" "displayName" . $.facts}}{{end}} — {{.now}}
+{{range $name, $set := $sets}}{{$p := $set.spec.person}}{{if or (not $.person) (eq $p $.person)}}{{$n = add1 $n}}
+## {{$name}} ({{$p}}, {{$set.spec.cycle}})
+{{range $set.spec.objectives}}
+### {{.title}}
+{{range .keyResults}}- KR: {{.}}
+{{else}}- KR: none
+{{end}}{{range .competencies}}- {{.}}: {{dig "status" $p . "status" "not in framework" $.derive}}
+{{else}}- no linked competencies
+{{end}}{{end}}{{end}}{{end}}{{if eq $n 0}}
+No OKRs.
+{{end -}}

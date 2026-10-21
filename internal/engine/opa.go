@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -61,10 +62,17 @@ func LoadModules(core fs.FS, wsPolicyDir string) (map[string]string, error) {
 	if err := read(core, "policy/core", "core"); err != nil {
 		return nil, err
 	}
-	if st, err := os.Stat(wsPolicyDir); err == nil && st.IsDir() {
-		if err := read(os.DirFS(wsPolicyDir), ".", "policy"); err != nil {
-			return nil, err
-		}
+	st, err := os.Stat(wsPolicyDir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return mods, nil // workspace policies are optional
+	case err != nil:
+		return nil, err
+	case !st.IsDir():
+		return nil, fmt.Errorf("%s is not a directory", wsPolicyDir)
+	}
+	if err := read(os.DirFS(wsPolicyDir), ".", "policy"); err != nil {
+		return nil, err
 	}
 	return mods, nil
 }
@@ -72,6 +80,11 @@ func LoadModules(core fs.FS, wsPolicyDir string) (map[string]string, error) {
 // Evaluate runs data.mgmt over the facts document. It returns
 // data.mgmt.derive and data.mgmt.report (empty maps when undefined) and the
 // deny and warn sets of every data.mgmt.policy.<pkg>, each sorted.
+//
+// Policy packages are one level below mgmt.policy, as the spec defines
+// (`mgmt.policy.<name>`). Rules in a nested package such as
+// mgmt.policy.ensek.okr appear at data.mgmt.policy.ensek.okr and are not
+// read: put them in package mgmt.policy.ensek instead.
 func Evaluate(f facts.Facts, modules map[string]string) (derive, report map[string]any, deny, warn []facts.Finding, err error) {
 	input, err := toInput(f)
 	if err != nil {
@@ -108,8 +121,8 @@ func Evaluate(f facts.Facts, modules map[string]string) (derive, report map[stri
 	pkgs := asMap(root["policy"])
 	for _, pkg := range sortedKeys(pkgs) {
 		p := asMap(pkgs[pkg])
-		deny = append(deny, decodeFindings(p["deny"], "error")...)
-		warn = append(warn, decodeFindings(p["warn"], "warning")...)
+		deny = append(deny, decodeFindings(p["deny"], "error", pkg)...)
+		warn = append(warn, decodeFindings(p["warn"], "warning", pkg)...)
 	}
 	SortFindings(deny)
 	SortFindings(warn)
@@ -145,12 +158,26 @@ func sortedKeys(m map[string]any) []string {
 	return keys
 }
 
-// decodeFindings reads a deny or warn set; message falls back to msg.
-func decodeFindings(v any, severity string) []facts.Finding {
+// decodeFindings reads a deny or warn set of package pkg. Each entry is
+// normally {id, person, file, line, message} (message falls back to msg).
+// Conftest-style entries are accepted too: a plain string becomes a finding
+// with id = pkg and that string as message and no location (lint prints it
+// as "error <pkg>: <message>"). An object without id gets id = pkg, and one
+// without message or msg gets its own compact JSON as message, so no
+// finding prints blank.
+func decodeFindings(v any, severity, pkg string) []facts.Finding {
 	list, _ := v.([]any)
 	out := make([]facts.Finding, 0, len(list))
 	for _, e := range list {
-		m := asMap(e)
+		m, isObj := e.(map[string]any)
+		if !isObj {
+			msg, ok := e.(string)
+			if !ok {
+				msg = compactJSON(e)
+			}
+			out = append(out, facts.Finding{Severity: severity, ID: pkg, Message: msg})
+			continue
+		}
 		f := facts.Finding{
 			Severity: severity,
 			ID:       str(m["id"]),
@@ -163,9 +190,24 @@ func decodeFindings(v any, severity string) []facts.Finding {
 		if f.Message == "" {
 			f.Message = str(m["msg"])
 		}
+		if f.Message == "" {
+			f.Message = compactJSON(e)
+		}
+		if f.ID == "" {
+			f.ID = pkg
+		}
 		out = append(out, f)
 	}
 	return out
+}
+
+// compactJSON renders a policy value for a message; keys come out sorted.
+func compactJSON(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return fmt.Sprint(v)
+	}
+	return string(b)
 }
 
 func str(v any) string {
