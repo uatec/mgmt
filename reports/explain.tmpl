@@ -9,15 +9,24 @@ Status: {{.status}}
 Required: {{if .required}}yes{{else}}no{{end}} ({{.person.framework}} {{.person.level}})
 Bar ({{.person.level}}): {{with .descriptor}}{{.}}{{else}}not required at {{$.view.person.level}}{{end}}
 {{$min := .settings.minPerCompetency -}}
-Rule: {{if eq .rule "negativeOverrides" -}}
-negativeOverrides: the most recent mark decides; proven needs at least {{$min}} positive mark{{if ne (toString $min) "1"}}s{{end}}
+{{$weighted := ne .rule "latest" -}}
+{{$marks := printf "positive mark%s" (ternary "" "s" (eq (toString $min) "1")) -}}
+Rule: {{if $weighted -}}
+weighted — proven above 0 with at least {{$min}} {{$marks}}; disproven below 0
+Score: {{.score}} ({{.status}})
 {{- else -}}
-counting: proven when positives exceed negatives and reach {{$min}} ({{.positives}} positive, {{.negatives}} negative)
+latest — the most recent mark decides; proven needs at least {{$min}} {{$marks}}
 {{- end}}
 Window: {{.window.from}} to {{.window.to}} ({{with .window.cycle}}{{.}}{{else}}rolling{{end}})
 
 ## Considered
-{{range .considered}}{{template "mark" .}}{{if .decides}} ← decides{{end}}
+{{range .considered -}}
+{{if $weighted -}}
+- {{.date}} {{.tag}} {{if gt (int .weight) 0}}+{{end}}{{.weight}} · {{.text}} ({{.file}}:{{.line}})
+{{- with .neutralisedBy}} — neutralised by: {{.text}} ({{.file}}:{{.line}}){{end}}
+{{- else -}}
+{{template "mark" .}}{{if .decides}} ← decides{{end}}
+{{- end}}
 {{else}}- none
 {{end}}
 ## Outside window
