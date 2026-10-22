@@ -234,7 +234,7 @@ mgmt completion fish | source      # ~/.config/fish/config.fish
 ```
 
 Tab then completes commands, flags and flag values (`--format`, `--cycle`), and
-your data: people and their aliases, the competencies of that person's
+your data: people (once each, by name; aliases only when no name matches), the competencies of that person's
 framework (`mgmt explain sam pl<Tab>`), cycle names and your own report names.
 Candidates come from `resources/` and `reports/` in the current directory, so
 outside a workspace only commands and flags complete. Notes are never read.
