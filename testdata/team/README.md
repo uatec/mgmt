@@ -24,10 +24,11 @@ Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
 `notes/2026-W43.md` also has a `## Platform sync (Tue 20 Oct)` section dated
 2026-10-20 with `@sam` and `@priya` lines.
 
-Strong marks: `--planning` at W38:4 and W43:13 (sam), `++ownership` at W37:4
-and `++crossteam` at W43:12 (priya). Each counts as one mark in status. No
-`++` belongs to sam, who is at the top of the ladder, so `no-next-level`
-never fires. `review` tags strong evidence `++`/`--`; prep's "To raise" lists
+Strong marks: `--planning` at W38:4 and W43:13, `++ownership` at W43:14 and
+`++planning` at W43:15 (sam); `++ownership` at W37:4 and `++crossteam` at
+W43:12 (priya). Each counts as one mark in status. sam is at the top of the
+ladder, so W43:14 gives `no-next-level`; W43:15 carries
+`<!-- mgmt:ignore no-next-level -->`, so it gives none. `review` tags strong evidence `++`/`--`; prep's "To raise" lists
 the strong marks since the last 1:1, newest first. `review` and `explain`
 print each competency's descriptor at the person's level as `Bar (<level>)`.
 
@@ -43,8 +44,8 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 
 | Competency | Status | Why |
 | --- | --- | --- |
-| delivery.ownership | proven | +W30:4, +W36:5; W43:8 is outside the window |
-| collab.planning | disproven | -W32:4, +W34:4, --W38:4 (decides); +W42:4 and --W43:13 are outside the window |
+| delivery.ownership | proven | +W30:4, +W36:5; W43:8 and ++W43:14 are outside the window |
+| collab.planning | disproven | -W32:4, +W34:4, --W38:4 (decides); +W42:4, --W43:13 and ++W43:15 are outside the window |
 | scope.crossteam | unproven | touch only (~W32:5, 2026-08-03) |
 | collab.feedback | proven | +W32:6, +W40:4 |
 
@@ -55,8 +56,9 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
   2026-10-23, W38:5 `tidy the runbook` with no due date.
 - Closed actions: W30:6 (mine), W34:5 (theirs).
 - Last 1:1 section before now: W42 (2026-10-12). Since then: W43:8
-  (+ownership), W43:9 (~planning) and W43:13 (--planning), all 2026-10-20.
-  To raise: W43:13. Its `negative-unaddressed` grace (7 days) has not run
+  (+ownership), W43:9 (~planning), W43:13 (--planning), W43:14 (++ownership)
+  and W43:15 (++planning), all 2026-10-20 and outside the window.
+  To raise: W43:15, W43:14, W43:13. Its `negative-unaddressed` grace (7 days) has not run
   out on 2026-10-21.
 - Gaps: collab.planning disproven, addressed by W42:6; scope.crossteam
   unproven, not addressed.

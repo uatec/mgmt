@@ -1,6 +1,6 @@
 # Lint — 2026-10-21
 
-0 errors, 14 warnings
+0 errors, 15 warnings
 
 ## Jo Example (jo)
 
@@ -27,5 +27,7 @@
   - input peer-feedback not recorded for cycle ensek-2026-h2 (1 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
 - **gap-unaddressed**
   - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:1)
+- **no-next-level**
+  - ++ delivery.ownership mark for sam on 2026-10-20, but IC3 is the top level of the ladder (notes/2026-W43.md:14)
 - **oneonone-overdue**
   - no 1:1 section for sam since 2026-10-12 (cadence 7d) (resources/people.yaml:1)

@@ -11,4 +11,5 @@ Window: 2026-04-01 to 2026-09-30 (ensek-2026-h2)
 - 2026-07-20 + · owned the queue migration rollout end to end (notes/2026-W30.md:4)
 
 ## Outside window
+- 2026-10-20 ++ · ran the incident retro for the whole department (notes/2026-W43.md:14)
 - 2026-10-20 + · led the incident review well (notes/2026-W43.md:8)

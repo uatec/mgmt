@@ -13,12 +13,16 @@ Window: 2026-01-05 to 2026-03-31 (retro-2026-h1)
 - [ ] no due date · tidy the runbook (notes/2026-W38.md:5)
 
 ## To raise
+- 2026-10-20 ++ collab.planning · ran the quarterly planning session for the platform group (notes/2026-W43.md:15)
+- 2026-10-20 ++ delivery.ownership · ran the incident retro for the whole department (notes/2026-W43.md:14)
 - 2026-10-20 -- collab.planning · promised the platform team a date nobody had sized (notes/2026-W43.md:13)
 
 ## Since last 1:1 (2026-10-12)
 - 2026-10-20 + delivery.ownership · led the incident review well (notes/2026-W43.md:8)
 - 2026-10-20 ~ collab.planning · walked the team through the roadmap (notes/2026-W43.md:9)
 - 2026-10-20 -- collab.planning · promised the platform team a date nobody had sized (notes/2026-W43.md:13)
+- 2026-10-20 ++ delivery.ownership · ran the incident retro for the whole department (notes/2026-W43.md:14)
+- 2026-10-20 ++ collab.planning · ran the quarterly planning session for the platform group (notes/2026-W43.md:15)
 
 ## Gaps
 - unproven collab.feedback · Gives clear, kind and useful feedback · not addressed

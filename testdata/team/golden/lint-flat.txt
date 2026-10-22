@@ -1,5 +1,6 @@
 notes/2026-W38.md:5: warning action-no-due [sam]: action "tidy the runbook" has no due date
 notes/2026-W42.md:5: warning action-overdue [sam]: action "send him the L4 section" was due 2026-10-20
+notes/2026-W43.md:14: warning no-next-level [sam]: ++ delivery.ownership mark for sam on 2026-10-20, but IC3 is the top level of the ladder
 resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
 resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
 resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [jo]: jo: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
@@ -12,4 +13,4 @@ resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap collab.planning 
 resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap delivery.ownership (unproven) has no open action addressing it
 resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap scope.crossteam (unproven) has no open action addressing it
 resources/people.yaml:24: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
-0 errors, 14 warnings
+0 errors, 15 warnings
