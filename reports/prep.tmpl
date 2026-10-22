@@ -15,9 +15,14 @@ Window: {{.from}} to {{.to}} ({{with .cycle}}{{.}}{{else}}rolling{{end}})
 ### Theirs
 {{range .actions.theirs}}{{template "action" .}}{{else}}- none
 {{end}}
+## To raise
+{{range .toRaise -}}
+- {{.date}} {{.tag}} {{.competency}} · {{.text}} ({{.file}}:{{.line}})
+{{else}}- none
+{{end}}
 ## Since last 1:1 ({{with .lastSection}}{{.}}{{else}}none{{end}})
 {{range .since -}}
-- {{.date}} {{if eq .kind "touch"}}~{{else if eq (toString .polarity) "1"}}+{{else}}-{{end}} {{.competency}} · {{.text}} ({{.file}}:{{.line}})
+- {{.date}} {{.tag}} {{.competency}} · {{.text}} ({{.file}}:{{.line}})
 {{else}}- none
 {{end}}
 ## Gaps

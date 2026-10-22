@@ -35,7 +35,9 @@ _framework(p) := _effective[_persons[p].spec.framework]
 
 _since(p) := object.get(_persons[p], ["spec", "since"], "")
 
-# _level_since(p) is when the person reached their level (Decision Q).
+# level_since[p] is when the person reached their level (Decision Q).
+level_since[p] := _level_since(p) if some p in object.keys(_persons)
+
 _level_since(p) := object.get(_persons[p], ["spec", "levelSince"], _since(p))
 
 # _includes maps each framework to the frameworks it includes directly.

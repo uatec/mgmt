@@ -24,6 +24,13 @@ Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
 `notes/2026-W43.md` also has a `## Platform sync (Tue 20 Oct)` section dated
 2026-10-20 with `@sam` and `@priya` lines.
 
+Strong marks: `--planning` at W38:4 and W43:13 (sam), `++ownership` at W37:4
+and `++crossteam` at W43:12 (priya). Each counts as one mark in status. No
+`++` belongs to sam, who is at the top of the ladder, so `no-next-level`
+never fires. `review` tags strong evidence `++`/`--`; prep's "To raise" lists
+the strong marks since the last 1:1, newest first. `review` and `explain`
+print each competency's descriptor at the person's level as `Bar (<level>)`.
+
 ## sam (IC3, since 2026-01-05, cadence 7d)
 
 Window 2026-04-01..2026-09-30 (ensek-2026-h2).
@@ -31,7 +38,7 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 | Competency | Status | Why |
 | --- | --- | --- |
 | delivery.ownership | proven | +W30:4, +W36:5; W43:8 is outside the window |
-| collab.planning | disproven | -W32:4, +W34:4, -W38:4 (decides); +W42:4 is outside the window |
+| collab.planning | disproven | -W32:4, +W34:4, --W38:4 (decides); +W42:4 and --W43:13 are outside the window |
 | scope.crossteam | unproven | touch only (~W32:5, 2026-08-03) |
 | collab.feedback | proven | +W32:6, +W40:4 |
 
@@ -42,7 +49,9 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
   2026-10-23, W38:5 `tidy the runbook` with no due date.
 - Closed actions: W30:6 (mine), W34:5 (theirs).
 - Last 1:1 section before now: W42 (2026-10-12). Since then: W43:8
-  (+ownership) and W43:9 (~planning), both 2026-10-20.
+  (+ownership), W43:9 (~planning) and W43:13 (--planning), all 2026-10-20.
+  To raise: W43:13. Its `negative-unaddressed` grace (7 days) has not run
+  out on 2026-10-21.
 - Gaps: collab.planning disproven, addressed by W42:6; scope.crossteam
   unproven, not addressed.
 - Suggested focus: scope.crossteam, last touched 2026-08-03.
@@ -51,13 +60,16 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 
 ## priya (IC2, since 2026-01-05, cadence 14d)
 
-Everything required is proven: delivery.ownership (+W31:4, +W37:4) and
+Everything required is proven: delivery.ownership (+W31:4, ++W37:4) and
 collab.feedback (+W33:4, +W39:4). W43:4 (+ownership) is outside the window.
 
 - Open actions: mine W43:5 due 2026-10-23; theirs W41:7 due 2026-11-06
   (addresses delivery.ownership). Closed: W31:5, W41:6.
 - Last 1:1 section before now: W43 (2026-10-19). Since then: W43:12
-  (+crossteam, 2026-10-20; crossteam is not required at IC2).
+  (++crossteam, 2026-10-20; crossteam is not required at IC2), which is also
+  the one item under To raise.
+- `explain priya crossteam`: not required at IC2 (no IC2 descriptor), nothing
+  considered, W43:12 outside the window.
 - Suggested focus: collab.feedback, last touched 2026-09-21.
 - Inputs: okrs (W35:4), self-assessment (W39:5), peer-feedback 3 of 3 (W39:6,
   W41:4, W41:5); nothing missing.

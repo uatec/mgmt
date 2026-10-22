@@ -246,6 +246,25 @@ test_no_next_level_level_off_ladder_silent if {
 	count(fired(with_sam(top_strong, {"level": "IC9"}), "no-next-level")) == 0
 }
 
+# Only ++ marks dated levelSince <= date <= now count (Decision Q).
+test_no_next_level_ignores_mark_before_level_since if {
+	count(fired(with_sam(top_strong, {"levelSince": "2026-10-15"}), "no-next-level")) == 0
+}
+
+test_no_next_level_fires_on_or_after_level_since if {
+	count(fired(with_sam(top_strong, {"levelSince": "2026-10-14"}), "no-next-level")) == 1
+}
+
+test_no_next_level_level_since_defaults_to_since if {
+	d := planning_evidence(quiet, [sev("collab.planning", 1, "2026-04-30", 4)])
+	count(fired(d, "no-next-level")) == 0
+}
+
+test_no_next_level_ignores_mark_after_now if {
+	d := planning_evidence(quiet, [sev("collab.planning", 1, "2026-10-22", 4)])
+	count(fired(d, "no-next-level")) == 0
+}
+
 test_no_next_level_still_counts_positive if {
 	derive_status := data.mgmt.derive.status.sam["collab.planning"] with input as top_strong
 	derive_status.positives == 1

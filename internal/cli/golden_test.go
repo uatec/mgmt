@@ -65,6 +65,7 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"explain", "sam", "planning"}, 0, "explain-sam-planning.md", ""},
 		{"team", []string{"explain", "sam", "delivery.ownership"}, 0, "explain-sam-ownership.md", ""},
 		{"team", []string{"explain", "jo", "PLANNING"}, 0, "explain-jo-planning.md", ""},
+		{"team", []string{"explain", "priya", "crossteam"}, 0, "explain-priya-crossteam.md", ""},
 		{"team", []string{"explain", "sam", "plannig"}, 2, "", "explain-plannig.stderr"},
 		{"team", []string{"explain", "sam", "zzzzzz"}, 2, "", "explain-zzzzzz.stderr"},
 		{"team", []string{"status"}, 0, "status.md", ""},
@@ -360,6 +361,7 @@ func TestPrepTemplateBranches(t *testing.T) {
 		"actions":     map[string]any{"mine": []any{}, "theirs": []any{}},
 		"lastSection": nil,
 		"since":       []any{},
+		"toRaise":     []any{},
 		"gaps": []any{map[string]any{
 			"competency": "collab.planning", "title": "Plans", "status": "disproven",
 			"addressedBy": []any{
@@ -376,6 +378,7 @@ func TestPrepTemplateBranches(t *testing.T) {
 	}
 	for _, want := range []string{
 		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
+		"## To raise\n- none\n",
 		"## Since last 1:1 (none)\n- none\n",
 		"addressed by notes/a.md:5, notes/b.md:6\n",
 		"## Suggested focus\n- none\n",
@@ -393,11 +396,12 @@ func TestExplainCountingRule(t *testing.T) {
 	view := map[string]any{
 		"person":     map[string]any{"name": "sam", "framework": "eng", "level": "IC3"},
 		"competency": map[string]any{"id": "collab.planning", "title": "Plans"},
+		"descriptor": nil,
 		"required":   false, "status": "proven", "rule": "counting", "positives": 2, "negatives": 1,
 		"settings": map[string]any{"minPerCompetency": 2, "negativeOverrides": false},
 		"window":   map[string]any{"from": "2026-07-23", "to": "2026-10-21", "cycle": nil},
 		"considered": []any{map[string]any{
-			"date": "2026-09-01", "polarity": -1, "text": "t", "file": "notes/a.md", "line": 3, "decides": false,
+			"date": "2026-09-01", "polarity": -1, "strength": 1, "tag": "-", "text": "t", "file": "notes/a.md", "line": 3, "decides": false,
 		}},
 		"outside": []any{},
 	}
@@ -406,7 +410,7 @@ func TestExplainCountingRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"Required: no (eng IC3)\n",
+		"Required: no (eng IC3)\nBar (IC3): not required at IC3\n",
 		"Rule: counting: proven when positives exceed negatives and reach 2 (2 positive, 1 negative)\n",
 		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
 		"- 2026-09-01 - · t (notes/a.md:3)\n\n## Outside window\n- none\n",

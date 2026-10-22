@@ -1,6 +1,6 @@
 {{- /* Review evidence pack. view = data.mgmt.report.review[person]. Never states a rating. */ -}}
 {{- define "evidence" -}}
-- {{.date}} · {{.text}} ({{.file}}:{{.line}})
+- {{.date}}{{if eq (toString .strength) "2"}} {{.tag}}{{end}} · {{.text}} ({{.file}}:{{.line}})
 {{end -}}
 {{- with .view -}}
 # Review evidence: {{.person.displayName}} — {{with .cycle}}{{.}}{{else}}last {{$.view.defaultWindow}}{{end}}
@@ -10,6 +10,7 @@
 ## {{.theme}}
 {{range .competencies}}
 ### {{.id}} · {{.title}}
+Bar ({{$.view.person.level}}): {{.descriptor}}
 Status: {{.status}}
 
 Positive:

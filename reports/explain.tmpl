@@ -1,12 +1,13 @@
 {{- /* Why a competency has its status. view = data.mgmt.report.explain[person][competency]. */ -}}
 {{- define "mark" -}}
-- {{.date}} {{if eq (toString .polarity) "1"}}+{{else}}-{{end}} · {{.text}} ({{.file}}:{{.line}})
+- {{.date}} {{.tag}} · {{.text}} ({{.file}}:{{.line}})
 {{- end -}}
 {{- with .view -}}
 # Explain: {{.person.name}} · {{.competency.id}}
 
 Status: {{.status}}
 Required: {{if .required}}yes{{else}}no{{end}} ({{.person.framework}} {{.person.level}})
+Bar ({{.person.level}}): {{with .descriptor}}{{.}}{{else}}not required at {{$.view.person.level}}{{end}}
 {{$min := .settings.minPerCompetency -}}
 Rule: {{if eq .rule "negativeOverrides" -}}
 negativeOverrides: the most recent mark decides; proven needs at least {{$min}} positive mark{{if ne (toString $min) "1"}}s{{end}}

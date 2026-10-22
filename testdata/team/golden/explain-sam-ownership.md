@@ -2,6 +2,7 @@
 
 Status: proven
 Required: yes (eng IC3)
+Bar (IC3): Owns a whole piece of work from idea to follow-up without being chased.
 Rule: negativeOverrides: the most recent mark decides; proven needs at least 1 positive mark
 Window: 2026-04-01 to 2026-09-30 (ensek-2026-h2)
 

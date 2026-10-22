@@ -175,11 +175,12 @@ instead. A required competency that is unproven or disproven is a **gap**.
 2. `mgmt lint` to catch typos (it suggests the closest token or name) and to
    see what needs attention: overdue actions, unaddressed negatives, people
    you haven't had a 1:1 with.
-3. Before a 1:1: `mgmt prep <person>` for open actions, what happened since
-   last time, gaps and a suggested focus.
+3. Before a 1:1: `mgmt prep <person>` for open actions, the `++`/`--` marks
+   to raise, what happened since last time, gaps and a suggested focus.
 4. At review time: `mgmt review <person> --out <person>-review.md` for the
-   evidence pack, and `mgmt status` for the team picture. `mgmt explain
-   <person> <competency>` shows exactly which notes decided a status.
+   evidence pack (each competency with the bar at the person's level), and
+   `mgmt status` for the team picture. `mgmt explain <person> <competency>`
+   shows exactly which notes decided a status.
 
 ## Commands
 

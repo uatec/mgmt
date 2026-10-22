@@ -24,13 +24,15 @@ prep[p] := {
 	"window": object.get(derive.window, p, null),
 	"actions": {"mine": _open_actions(p, true), "theirs": _open_actions(p, false)},
 	"lastSection": last,
-	"since": _since_items(p, last),
+	"since": since,
+	"toRaise": _newest_first([i | some i in since; _strong(i)]),
 	"gaps": _gaps(p),
 	"focus": _focus(p),
 	"cycle": _cycle(p),
 } if {
 	some p in object.keys(_persons)
 	last := _last_section(p)
+	since := _since_items(p, last)
 }
 
 _person(p) := {
@@ -63,11 +65,12 @@ _last_section(p) := max(dates) if {
 } else := null
 
 # Marks and touches after the previous 1:1 (or from the since date when
-# there was none) up to now.
+# there was none) up to now. The ++ and -- marks among them are "To raise"
+# (Decision T; Ruling L1: since-based, not levelSince).
 _since_items(p, last) := _by_key([[[i.date, i.file, i.line, i.kind, i.competency], i] |
 	some i in array.concat(
-		[_item("mark", e.polarity, e) | some e in derive.evidence_by[p]],
-		[_item("touch", 0, t) | some t in derive.touches_by[p]],
+		[object.union(_item("mark", e.polarity, e), {"strength": _strength(e), "tag": _tag(e)}) | some e in derive.evidence_by[p]],
+		[object.union(_item("touch", 0, t), {"strength": 0, "tag": "~"}) | some t in derive.touches_by[p]],
 	)
 	_after(i.date, last, _since(p))
 	i.date <= _now
@@ -77,6 +80,22 @@ _item(kind, polarity, r) := {
 	"kind": kind, "polarity": polarity, "competency": r.competency,
 	"date": r.date, "text": r.text, "file": r.file, "line": r.line,
 }
+
+_strong(r) if r.strength == 2
+
+_strength(r) := object.get(r, "strength", 1)
+
+# _tag is a mark as written in the notes: ++, +, - or --.
+_tag(r) := concat("", [_sign(r.polarity), _sign(r.polarity)]) if {
+	_strength(r) == 2
+} else := _sign(r.polarity)
+
+_sign(polarity) := "+" if polarity > 0
+
+_sign(polarity) := "-" if polarity < 0
+
+# _tagged adds strength (default 1) and tag to each evidence record.
+_tagged(records) := [object.union(r, {"strength": _strength(r), "tag": _tag(r)}) | some r in records]
 
 _after(date, null, since) if date >= since
 
@@ -120,8 +139,9 @@ _cycle(p) := {
 
 # --- review ---------------------------------------------------------------
 
-# The evidence pack: required competencies grouped by theme. It carries no
-# rating and none of the cycle's outcomes.
+# The evidence pack: required competencies grouped by theme, each with the
+# bar at the person's level. It carries no rating and none of the cycle's
+# outcomes.
 review[p] := {
 	"person": _person(p),
 	"window": object.get(derive.window, p, null),
@@ -141,9 +161,10 @@ _themes(p) := [{"theme": t, "competencies": _by_key([[c, _review_item(p, c)] | s
 _review_item(p, c) := {
 	"id": c,
 	"title": _title(p, c),
+	"descriptor": object.get(derive.descriptor, [p, c], null),
 	"status": object.get(derive.status, [p, c, "status"], "unproven"),
-	"positive": _newest_first([m | some m in ms; m.polarity > 0]),
-	"negative": _newest_first([m | some m in ms; m.polarity < 0]),
+	"positive": _newest_first(_tagged([m | some m in ms; m.polarity > 0])),
+	"negative": _newest_first(_tagged([m | some m in ms; m.polarity < 0])),
 	"actions": [a | some a in object.get(derive.addressed_by, [p, c], []); _in_actions_range(p, a.date)],
 } if {
 	ms := object.get(derive.marks, [p, c], [])
@@ -171,12 +192,14 @@ _review_inputs(p) := _by_key([[i.name, i] | some i in object.get(derive.inputs, 
 
 # --- explain --------------------------------------------------------------
 
-# Why a competency has its status: the rule, the window, and every mark
+# Why a competency has its status: the bar at the person's level (null when
+# the competency is not required there), the rule, the window, and every mark
 # considered, newest first, flagging the one that decided (negativeOverrides
 # only: under counting the totals decide, not a single mark).
 explain[p][c] := {
 	"person": _person(p),
 	"competency": {"id": c, "title": _title(p, c)},
+	"descriptor": object.get(derive.descriptor, [p, c], null),
 	"required": c in object.get(derive.required, p, []),
 	"status": st.status,
 	"positives": st.positives,
@@ -184,8 +207,8 @@ explain[p][c] := {
 	"rule": st.rule,
 	"settings": derive.settings[p],
 	"window": derive.window[p],
-	"considered": _newest_first([object.union(m, {"decides": _decides(st.decidedBy, m)}) | some m in derive.marks[p][c]]),
-	"outside": _newest_first(derive.outside[p][c]),
+	"considered": _newest_first([object.union(m, {"decides": _decides(st.decidedBy, m)}) | some m in _tagged(derive.marks[p][c])]),
+	"outside": _newest_first(_tagged(derive.outside[p][c])),
 } if {
 	some p, comps in derive.competencies
 	some c in object.keys(comps)

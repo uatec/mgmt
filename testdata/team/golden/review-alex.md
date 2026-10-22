@@ -5,6 +5,7 @@ eng IC2 · window 2026-09-01 to 2026-10-21
 ## collab
 
 ### collab.feedback · Gives clear, kind and useful feedback
+Bar (IC2): Gives specific, kind feedback to teammates soon after the moment.
 Status: proven
 
 Positive:
@@ -19,6 +20,7 @@ Actions:
 ## delivery
 
 ### delivery.ownership · Owns outcomes end to end
+Bar (IC2): Sees their own tasks through to done and raises blockers early.
 Status: proven
 
 Positive:

@@ -5,6 +5,7 @@ eng IC3 · window 2026-04-01 to 2026-09-30
 ## collab
 
 ### collab.feedback · Gives clear, kind and useful feedback
+Bar (IC3): Makes feedback a team habit and asks for it in return.
 Status: proven
 
 Positive:
@@ -18,13 +19,14 @@ Actions:
 - none
 
 ### collab.planning · Contributes actively to planning and refinement
+Bar (IC3): Shapes the plan for their area, sizing work and naming risks up front.
 Status: disproven
 
 Positive:
 - 2026-08-17 · ran the refinement session well (notes/2026-W34.md:4)
 
 Negative:
-- 2026-09-14 · skipped the planning session without telling the team (notes/2026-W38.md:4)
+- 2026-09-14 -- · skipped the planning session without telling the team (notes/2026-W38.md:4)
 - 2026-08-03 · came to refinement without reading the tickets (notes/2026-W32.md:4)
 
 Actions:
@@ -33,6 +35,7 @@ Actions:
 ## delivery
 
 ### delivery.ownership · Owns outcomes end to end
+Bar (IC3): Owns a whole piece of work from idea to follow-up without being chased.
 Status: proven
 
 Positive:
@@ -48,6 +51,7 @@ Actions:
 ## scope
 
 ### scope.crossteam · Delivers work that spans teams
+Bar (IC3): Delivers changes that need agreement and work from more than one team.
 Status: unproven
 
 Positive:

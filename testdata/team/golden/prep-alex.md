@@ -10,6 +10,9 @@ Window: 2026-09-01 to 2026-10-21 (rolling)
 ### Theirs
 - [ ] 2026-10-23 · write up the restore drill findings (notes/2026-W42.md:12)
 
+## To raise
+- none
+
 ## Since last 1:1 (2026-10-12)
 - none
 

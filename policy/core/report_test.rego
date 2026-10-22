@@ -157,7 +157,7 @@ test_since_after_last_section_merged_and_sorted if {
 	])
 	p := report.prep.sam with input as facts
 	locs(p.since) == ["notes/z.md:1", "notes/a.md:9", "notes/b.md:2"]
-	p.since[0] == {"kind": "touch", "polarity": 0, "competency": "scope.crossteam", "date": "2026-10-13", "text": "t", "file": "notes/z.md", "line": 1}
+	p.since[0] == {"kind": "touch", "polarity": 0, "strength": 0, "tag": "~", "competency": "scope.crossteam", "date": "2026-10-13", "text": "t", "file": "notes/z.md", "line": 1}
 	p.since[2].kind == "mark"
 	p.since[2].polarity == -1
 }
@@ -165,6 +165,52 @@ test_since_after_last_section_merged_and_sorted if {
 test_since_without_section_starts_at_since_date if {
 	facts := with_records("evidence", [mark(1, "2026-04-30", "notes/a.md", 1), mark(1, "2026-05-01", "notes/b.md", 1)])
 	locs(report.prep.sam.since) == ["notes/b.md:1"] with input as facts
+}
+
+# smark is a strong (++ / --) mark.
+smark(pol, date, file, line) := object.union(mark(pol, date, file, line), {"strength": 2})
+
+# Decision T: "To raise" lists the ++ and -- marks in the same bounds as
+# "Since last 1:1", newest first; "Since last 1:1" tags every item.
+test_to_raise_strong_marks_after_last_section_newest_first if {
+	facts := json.patch(base, [
+		{"op": "replace", "path": "/sections", "value": [section("2026-10-12", 1)]},
+		{"op": "replace", "path": "/evidence", "value": [
+			smark(1, "2026-10-12", "notes/a.md", 1), # on the last 1:1: before the bounds
+			smark(1, "2026-10-13", "notes/a.md", 2),
+			smark(-1, "2026-10-19", "notes/b.md", 3),
+			object.union(mark(1, "2026-10-19", "notes/c.md", 4), {"strength": 1}),
+			smark(1, "2026-10-22", "notes/d.md", 5), # after now
+		]},
+		{"op": "replace", "path": "/touches", "value": [touch("2026-10-14", "notes/z.md", 1)]},
+	])
+	p := report.prep.sam with input as facts
+	locs(p.toRaise) == ["notes/b.md:3", "notes/a.md:2"]
+	p.toRaise[0] == {
+		"kind": "mark", "polarity": -1, "strength": 2, "tag": "--", "competency": "collab.planning",
+		"date": "2026-10-19", "text": "t", "file": "notes/b.md", "line": 3,
+	}
+	p.toRaise[1].tag == "++"
+	locs(p.since) == ["notes/a.md:2", "notes/z.md:1", "notes/b.md:3", "notes/c.md:4"]
+	[i.tag | some i in p.since] == ["++", "~", "--", "+"]
+}
+
+# Ruling L1: the bounds are since-based without a previous 1:1, even when
+# levelSince is later.
+test_to_raise_without_section_starts_at_since_date if {
+	facts := json.patch(base, [
+		{"op": "add", "path": "/resources/Person/sam/spec/levelSince", "value": "2026-09-01"},
+		{"op": "replace", "path": "/evidence", "value": [
+			smark(1, "2026-04-30", "notes/a.md", 1),
+			smark(1, "2026-05-01", "notes/b.md", 1),
+			smark(1, "2026-09-02", "notes/c.md", 1),
+		]},
+	])
+	locs(report.prep.sam.toRaise) == ["notes/c.md:1", "notes/b.md:1"] with input as facts
+}
+
+test_to_raise_empty if {
+	report.prep.sam.toRaise == [] with input as with_records("evidence", [mark(1, "2026-10-01", "notes/a.md", 1)])
 }
 
 # --- gaps -----------------------------------------------------------------
@@ -298,6 +344,21 @@ test_review_inputs_sorted_by_name if {
 	locs(r.inputs[1].records) == ["notes/a.md:1"]
 }
 
+# Each competency carries the bar at the person's level; ++ / -- are tagged.
+test_review_descriptor_and_tags if {
+	facts := with_records("evidence", [
+		smark(-1, "2026-09-14", "notes/c.md", 6),
+		mark(1, "2026-08-10", "notes/b.md", 6),
+		smark(1, "2026-08-01", "notes/a.md", 3),
+	])
+	r := report.review.sam with input as facts
+	planning := r.themes[0].competencies[0]
+	planning.descriptor == "p3"
+	[m.tag | some m in planning.positive] == ["+", "++"]
+	[m.tag | some m in planning.negative] == ["--"]
+	r.themes[1].competencies[0].descriptor == "o3"
+}
+
 # Decision L: without a cycle the rolling window applies and inputs are null.
 test_review_without_cycle if {
 	r := report.review.sam with input as doc({"sam": sam}, {})
@@ -357,6 +418,48 @@ test_explain_not_required_and_empty if {
 	e.status == "unproven"
 	e.considered == []
 	e.outside == []
+}
+
+test_explain_descriptor_and_tags if {
+	facts := with_records("evidence", [smark(-1, "2026-09-14", "notes/c.md", 6), smark(1, "2026-10-19", "notes/d.md", 6)])
+	e := report.explain.sam["collab.planning"] with input as facts
+	e.descriptor == "p3"
+	[c.tag | some c in e.considered] == ["--"]
+	[o.tag | some o in e.outside] == ["++"]
+}
+
+# Review Focus 4: no descriptor at the person's level means not required,
+# and the view stays total.
+test_explain_no_descriptor_is_null if {
+	no_scope := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
+	e := report.explain.sam["scope.crossteam"] with input as no_scope
+	e.descriptor == null
+	e.required == false
+}
+
+test_explain_level_off_ladder_is_total if {
+	off := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC9"}])
+	e := report.explain.sam["collab.planning"] with input as off
+	e.descriptor == null
+	e.required == false
+}
+
+# Review Focus 5: a ++ dated after since but before levelSince is outside
+# the window, so it is listed there and not considered.
+test_explain_strong_mark_before_level_since_is_outside if {
+	facts := json.patch(base, [
+		{"op": "add", "path": "/resources/Person/sam/spec/levelSince", "value": "2026-07-01"},
+		{"op": "replace", "path": "/evidence", "value": [
+			smark(1, "2026-06-15", "notes/a.md", 1),
+			smark(1, "2026-07-01", "notes/b.md", 1),
+		]},
+	])
+	e := report.explain.sam["collab.planning"] with input as facts
+	e.window.from == "2026-07-01"
+	locs(e.considered) == ["notes/b.md:1"]
+	locs(e.outside) == ["notes/a.md:1"]
+	e.outside[0].tag == "++"
+	e.positives == 1
 }
 
 # --- status ---------------------------------------------------------------

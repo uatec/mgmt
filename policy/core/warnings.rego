@@ -71,12 +71,15 @@ warn contains f if {
 # --- no-next-level --------------------------------------------------------
 
 # A ++ mark says "ready for more" (Decision S); at the top of the ladder
-# there is nothing to be ready for. The mark still counts as positive.
+# there is nothing to be ready for. The mark still counts as positive. Only
+# marks since the person reached their level, up to now, count (Decision Q).
 warn contains f if {
 	some m in object.get(input, "evidence", [])
 	m.polarity > 0
 	m.strength == 2
 	p := m.person
+	derive.level_since[p] <= m.date
+	m.date <= _now
 	derive.level[p] in derive.ladder[p]
 	not derive.next_level[p]
 	f := lib.finding("no-next-level", p, m.file, m.line, sprintf("++ %s mark for %s on %s, but %s is the top level of the ladder", [m.competency, p, m.date, derive.level[p]]))
