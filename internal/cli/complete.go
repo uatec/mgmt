@@ -121,7 +121,7 @@ func complete(words []string, root string) (cands []candidate, files bool) {
 	case cmd == "":
 		cands = commandDescs
 	default:
-		cands = positional(cmd, pos, root)
+		cands = positional(cmd, pos, cur, root)
 	}
 	return filterPrefix(cands, cur), files
 }
@@ -157,18 +157,18 @@ func flagValues(flag, cmd, root string) (cands []candidate, files bool) {
 }
 
 // positional returns the candidates for the next positional argument of cmd,
-// given the positional arguments already typed.
-func positional(cmd string, pos []string, root string) []candidate {
+// given the positional arguments already typed and the word under the cursor.
+func positional(cmd string, pos []string, cur, root string) []candidate {
 	n := len(pos)
 	switch cmd {
 	case "prep", "review", "promo":
 		if n == 0 {
-			return people(root)
+			return people(root, cur)
 		}
 	case "explain":
 		switch n {
 		case 0:
-			return people(root)
+			return people(root, cur)
 		case 1:
 			return competencies(root, pos[0])
 		}
@@ -177,7 +177,7 @@ func positional(cmd string, pos []string, root string) []candidate {
 		case 0:
 			return reportNames(root)
 		case 1:
-			return people(root)
+			return people(root, cur)
 		}
 	case "completion":
 		if n == 0 {
@@ -215,20 +215,17 @@ func str(m map[string]any, key string) string {
 	return s
 }
 
-// people lists Person names, then aliases that aren't just another casing of
-// a name already listed (every lookup is case-insensitive).
-func people(root string) []candidate {
-	var out []candidate
-	seen := map[string]bool{}
-	var aliases []candidate
+// people lists each Person once, by name. Aliases are accepted wherever a
+// person is, but offering them too would list everyone several times, so they
+// are only offered when cur matches no name.
+func people(root, cur string) []candidate {
+	var names, aliases []candidate
 	for _, r := range resources(root) {
 		if r.Kind != "Person" {
 			continue
 		}
 		spec := specOf(r)
-		name := str(spec, "displayName")
-		out = append(out, candidate{r.Name, name})
-		seen[strings.ToLower(r.Name)] = true
+		names = append(names, candidate{r.Name, str(spec, "displayName")})
 		list, _ := spec["aliases"].([]any)
 		for _, a := range list {
 			if s, ok := a.(string); ok {
@@ -236,15 +233,15 @@ func people(root string) []candidate {
 			}
 		}
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].value < out[j].value })
-	sort.Slice(aliases, func(i, j int) bool { return aliases[i].value < aliases[j].value })
-	for _, a := range aliases {
-		if k := strings.ToLower(a.value); !seen[k] {
-			seen[k] = true
-			out = append(out, a)
-		}
+	byValue := func(c []candidate) {
+		sort.Slice(c, func(i, j int) bool { return c[i].value < c[j].value })
 	}
-	return out
+	byValue(names)
+	if len(filterPrefix(names, cur)) > 0 {
+		return names
+	}
+	byValue(aliases)
+	return aliases
 }
 
 // competencies lists everything that resolves as a competency for person (a
