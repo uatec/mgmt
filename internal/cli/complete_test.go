@@ -17,12 +17,14 @@ func TestComplete(t *testing.T) {
 		words string // the command line after "mgmt"; the last word is the one being completed
 		want  string // space-separated values, in order; ":files" asks for file names
 	}{
-		{"commands", team, "", "init facts lint prep review explain status report completion"},
+		{"commands", team, "", "init facts lint prep review promo explain status report completion"},
 		{"command prefix", team, "re", "review report"},
 		{"global flag before command", team, "--n", "--now"},
 		{"people", team, "prep ", "alex jo priya sam Samuel"},
 		{"people by prefix, any case", team, "prep S", "sam Samuel"},
 		{"alias is offered once, not per casing", team, "prep Sam", "sam Samuel"},
+		{"promo takes a person", team, "promo sa", "sam Samuel"},
+		{"promo has no --cycle", team, "promo sam --", "--now --out"},
 		{"review takes a person", team, "review pr", "priya"},
 		{"person is only the first positional", team, "prep sam ", ""},
 		{"competencies need a person first", team, "explain ", "alex jo priya sam Samuel"},
@@ -39,7 +41,7 @@ func TestComplete(t *testing.T) {
 		{"flags of a command", team, "status --c", "--cycle"},
 		{"flag after positionals", team, "prep sam --", "--cycle --now --out"},
 		{"out takes files", team, "lint --out ", ":files"},
-		{"global flag value is not a positional", team, "--now 2026-10-21 pr", "prep"},
+		{"global flag value is not a positional", team, "--now 2026-10-21 pr", "prep promo"},
 		{"report names", ensek, "report ", "okrs"},
 		{"report then person", ensek, "report okrs s", "sam Samuel"},
 		{"completion shells", team, "completion ", "zsh bash fish"},

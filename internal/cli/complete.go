@@ -32,6 +32,7 @@ var commandDescs = []candidate{
 	{"lint", "print errors and warnings"},
 	{"prep", "print the 1:1 prep sheet"},
 	{"review", "print the review evidence pack"},
+	{"promo", "print a draft promotion packet"},
 	{"explain", "explain why a competency has its status"},
 	{"status", "print the team matrix and cycle checks"},
 	{"report", "run a workspace report"},
@@ -159,7 +160,7 @@ func flagValues(flag, cmd, root string) (cands []candidate, files bool) {
 func positional(cmd string, pos []string, root string) []candidate {
 	n := len(pos)
 	switch cmd {
-	case "prep", "review":
+	case "prep", "review", "promo":
 		if n == 0 {
 			return people(root)
 		}
