@@ -38,6 +38,7 @@ commands:
                                        print the team matrix and cycle checks
   report <name> [<person>] [--cycle NAME]
                                        run a workspace report (reports/<name>.tmpl)
+  help [notes]                         print this usage, or the notes cheat sheet
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
@@ -83,6 +84,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runStatus(rest[1:], root, *now, &buf, stderr)
 	case "report":
 		code = runCustomReport(rest[1:], root, *now, &buf, stderr)
+	case "help":
+		code = runHelp(rest[1:], &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}

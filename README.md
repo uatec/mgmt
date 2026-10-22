@@ -154,7 +154,7 @@ metadata: {name: h2-2026}
 spec:
   period: {from: 2026-07-01, to: 2026-12-31}
   selector: {people: [alex]}    # or matchFrameworks: [core] for everyone whose framework is or includes core
-  evidence: {minPerCompetency: 1, negativeOverrides: true}
+  evidence: {minPerCompetency: 1, scoring: weighted}   # or scoring: latest
   inputs:                       # things to collect; record receipt with !name in notes
     - {name: self-assessment, required: true}
     - {name: peer-feedback, minCount: 3}
@@ -162,11 +162,26 @@ spec:
     - {name: manager-draft, due: 2026-12-01}
 ```
 
-A competency is **proven** when it has at least `minPerCompetency` positive
-marks in the window and the latest mark is positive, **disproven** when the
-latest mark is negative, and **unproven** otherwise. With
-`negativeOverrides: false` it is proven when positives outnumber negatives
-instead. A required competency that is unproven or disproven is a **gap**.
+Each competency gets a **score** from its marks in the window: `+` scores
++1, `++` +2, `-` −1 and `--` −2. It is **proven** when the score is above 0
+and it has at least `minPerCompetency` positive marks, **disproven** when the
+score is below 0, and **unproven** otherwise. A required competency that is
+unproven or disproven is a **gap**.
+
+A negative is **neutralised** (it scores 0 instead) only when an action
+addressing it is completed. Fixing a mistake brings the score back to where it
+was; it doesn't add to it. For each person and competency, the completed
+(`- [x]`) actions that address it with `~x`, dated up to today (inside the
+window or after it), each neutralise one negative: the most recent negatives
+dated on or before the newest such action, the most recent paired with the
+newest action. An open action never neutralises anything, though it does
+silence `negative-unaddressed` and `gap-unaddressed`. `mgmt explain` shows
+each mark's weight and the action that neutralised it.
+
+With `scoring: latest` the most recent mark decides instead: disproven if it
+is negative, proven if it is positive and there are at least
+`minPerCompetency` positive marks. Without a cycle the settings are
+`minPerCompetency: 1` and `scoring: weighted`.
 
 ## A typical week
 
@@ -180,7 +195,7 @@ instead. A required competency that is unproven or disproven is a **gap**.
 4. At review time: `mgmt review <person> --out <person>-review.md` for the
    evidence pack (each competency with the bar at the person's level), and
    `mgmt status` for the team picture. `mgmt explain <person> <competency>`
-   shows exactly which notes decided a status.
+   shows the score and exactly which notes made it.
 
 ## Commands
 
@@ -202,12 +217,46 @@ and `mgmt review sam --out sam.md`.
 | `mgmt explain <person> <competency> [--cycle <name>]` | why a competency has its status |
 | `mgmt report <name> [<person>]` | run a workspace report template (`reports/<name>.tmpl`) |
 | `mgmt facts` | print the facts document as JSON |
+| `mgmt help [notes]` | print the usage, or the [notes cheat sheet](#notes-cheat-sheet) |
 
 `<person>` accepts a Person name or alias.
 
 ## Notes syntax
 
 Person and date are inherited from context, so a mark is a single token.
+
+### Notes cheat sheet
+
+`mgmt help notes` prints this.
+
+```text
+Notes cheat sheet
+
+Who and when
+  A heading that names a person sets who the lines under it are about.
+  The file name (2026-W43.md, 2026-10-22.md), or a date in a heading, sets when.
+
+Marks (x is a competency id or one of its tokens)
+  +x                 positive: scores +1
+  ++x                strong positive: +2; also next-level evidence (promo)
+  -x                 negative: -1; warns until an action addresses it
+  --x                strong negative: -2; warns until an action addresses it
+  ~x  (on a line)    discussed: no score; keeps competency-untouched quiet
+  ~x  (on an action) the action addresses x: open, it silences the negative and
+                     gap warnings; completed, it neutralises a negative
+  - [ ] / - [x]      an open / a completed action; open and past due, it warns
+  @person            the line is about someone else; on an action, the owner
+  @date              an action's due date: @2026-10-28, @28oct, @fri
+  !input             a review cycle input received; quiets cycle-input-missing
+  <!-- mgmt:ignore id -->  silences warning id on this line (never an error)
+
+Scoring (weighted, the default; a cycle may set scoring: latest)
+  Score: the sum of the window's marks (+ 1, ++ 2, - -1, -- -2, neutralised 0).
+  Proven above 0 with enough positive marks; disproven below 0; else unproven.
+  A negative is neutralised only when an action addressing it is completed.
+```
+
+### In detail
 
 ```markdown
 # 2026-W43
@@ -235,8 +284,8 @@ Person and date are inherited from context, so a mark is a single token.
   touch, where `x` is a competency id or token.
 - `++x` and `--x` are strong evidence: praise worth raising and a serious
   concern. A `++` also shows work at the next level up; a `--` counts as a
-  negative mark and needs addressing like any other. Each still counts as one
-  mark in status. They are not allowed on action lines.
+  negative mark and needs addressing like any other. Each counts as one mark
+  toward `minPerCompetency`, but scores 2. They are not allowed on action lines.
 - `- [ ]` is an open action and `- [x]` a closed one. On an action, `@date` sets
   the due date, `@person` the owner (default: you) and `~x` the competency it
   addresses. `@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names

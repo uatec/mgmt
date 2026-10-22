@@ -1,0 +1,24 @@
+Notes cheat sheet
+
+Who and when
+  A heading that names a person sets who the lines under it are about.
+  The file name (2026-W43.md, 2026-10-22.md), or a date in a heading, sets when.
+
+Marks (x is a competency id or one of its tokens)
+  +x                 positive: scores +1
+  ++x                strong positive: +2; also next-level evidence (promo)
+  -x                 negative: -1; warns until an action addresses it
+  --x                strong negative: -2; warns until an action addresses it
+  ~x  (on a line)    discussed: no score; keeps competency-untouched quiet
+  ~x  (on an action) the action addresses x: open, it silences the negative and
+                     gap warnings; completed, it neutralises a negative
+  - [ ] / - [x]      an open / a completed action; open and past due, it warns
+  @person            the line is about someone else; on an action, the owner
+  @date              an action's due date: @2026-10-28, @28oct, @fri
+  !input             a review cycle input received; quiets cycle-input-missing
+  <!-- mgmt:ignore id -->  silences warning id on this line (never an error)
+
+Scoring (weighted, the default; a cycle may set scoring: latest)
+  Score: the sum of the window's marks (+ 1, ++ 2, - -1, -- -2, neutralised 0).
+  Proven above 0 with enough positive marks; disproven below 0; else unproven.
+  A negative is neutralised only when an action addressing it is completed.
