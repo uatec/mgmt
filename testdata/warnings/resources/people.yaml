@@ -5,8 +5,7 @@ metadata:
 spec:
   aliases: [Sam]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-05-01
   oneToOneCadence: 7d
 ---
@@ -17,8 +16,7 @@ metadata:
 spec:
   aliases: [Priya]
   framework: eng
-  role: platform-engineer
-  level: L2
+  level: IC2
   since: 2026-05-01
 ---
 apiVersion: mgmt/v1alpha1
@@ -28,7 +26,6 @@ metadata:
 spec:
   aliases: [Jo]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-05-01
   # mgmt:ignore gap-unaddressed

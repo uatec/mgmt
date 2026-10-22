@@ -6,8 +6,7 @@ spec:
   displayName: Sam Example
   aliases: [Sam, Samuel]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-01-05
   oneToOneCadence: 7d
 ---
@@ -19,8 +18,7 @@ spec:
   displayName: Priya Example
   aliases: [Priya]
   framework: eng
-  role: platform-engineer
-  level: L2
+  level: IC2
   since: 2026-01-05
 ---
 apiVersion: mgmt/v1alpha1
@@ -31,8 +29,7 @@ spec:
   displayName: Jo Example
   aliases: [Jo]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-05-01
 ---
 apiVersion: mgmt/v1alpha1
@@ -43,6 +40,5 @@ spec:
   displayName: Alex Example
   aliases: [Alex]
   framework: eng
-  role: platform-engineer
-  level: L2
+  level: IC2
   since: 2026-09-01

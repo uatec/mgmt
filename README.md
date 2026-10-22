@@ -41,7 +41,7 @@ Then replace the example people, framework and cycle with your own (see
 ```
 my-team/
   resources/workspace.yaml      where notes live, defaults
-  resources/framework.yaml      competencies and what each role/level expects
+  resources/framework.yaml      competencies and their descriptor at each level
   resources/people.yaml         your reports
   resources/cycles/*.yaml       review cycles (optional)
   notes/2026-W43.md             one markdown file per week (or per day)
@@ -84,24 +84,46 @@ up in `file:line` references with their absolute path. mgmt only reads them. Rel
 The folder part of the glob must not contain glob characters (`[ ] { } * ?`),
 so a vault called `Work [2026]` needs a symlink or a renamed folder.
 
-**CompetencyFramework**: the competencies, the short tokens you write in notes,
-and what each role expects at each level. A level inherits its lower level's
-expectations unless it `removes` them. An id's prefix (`delivery.`) is its
-theme.
+**CompetencyFramework**: a competency × level matrix. `levels` is the ordered
+ladder, lowest first. Each competency has an id, a title, the short tokens you
+write in notes, an optional `summary`, and a descriptor per level: the bar a
+person at that level is judged against. A competency is **required** for a
+person when it has a descriptor at their level; leave a level out where the
+competency doesn't apply. An id's prefix (`core.`) is its theme.
+
+Shared competencies live in one framework that others `includes`, rather than
+being copied. A framework's competencies are its own plus everything it
+includes, transitively, and its ladder must match each included framework's.
 
 ```yaml
 apiVersion: mgmt/v1alpha1
 kind: CompetencyFramework
-metadata: {name: eng}
+metadata: {name: core}
 spec:
+  levels: [IC1, IC2, IC3]
   competencies:
-    - {id: delivery.ownership, title: Owns outcomes end to end, tokens: [ownership, own]}
-    - {id: collab.planning, title: Contributes to planning and refinement, tokens: [planning, plan]}
-  roles:
-    - name: engineer
+    - id: core.ownership
+      title: Owns outcomes end to end
+      tokens: [ownership, own]
+      summary: Takes responsibility for results, not just tasks.
       levels:
-        - {name: L1, expects: [delivery.ownership]}
-        - {name: L2, inherits: L1, expects: [collab.planning]}
+        IC1: Finishes the tasks they pick up and says early when they are stuck.
+        IC2: Sees their own work through to done, including the follow-up.
+        IC3: Owns a whole piece of work from idea to outcome without being chased.
+---
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata: {name: software-engineering}
+spec:
+  includes: [core]
+  levels: [IC1, IC2, IC3]
+  competencies:
+    - id: eng.planning
+      title: Contributes to planning and refinement
+      tokens: [planning, plan]
+      levels:                   # not required at IC1
+        IC2: Breaks their own work into clear, sized steps.
+        IC3: Shapes the plan for their area and names risks up front.
 ```
 
 **Person**: one per report. Gaps and statuses are never written here; they
@@ -114,10 +136,10 @@ metadata: {name: alex}
 spec:
   displayName: Alex Example
   aliases: [Alex]               # how you write their name in headings
-  framework: eng
-  role: engineer
-  level: L2
+  framework: software-engineering
+  level: IC2                    # a level on the framework's ladder
   since: 2026-09-01             # evidence before this date is ignored
+  levelSince: 2026-10-01        # optional: reached this level; evidence before it is ignored (default: since)
   oneToOneCadence: 7d           # optional override
 ```
 
@@ -130,9 +152,8 @@ apiVersion: mgmt/v1alpha1
 kind: ReviewCycle
 metadata: {name: h2-2026}
 spec:
-  framework: eng
   period: {from: 2026-07-01, to: 2026-12-31}
-  selector: {people: [alex]}    # or matchRoles: [engineer]
+  selector: {people: [alex]}    # or matchFrameworks: [core]: everyone whose framework is or includes core
   evidence: {minPerCompetency: 1, negativeOverrides: true}
   inputs:                       # things to collect; record receipt with !name in notes
     - {name: self-assessment, required: true}

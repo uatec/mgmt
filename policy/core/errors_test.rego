@@ -10,56 +10,51 @@ framework := {
 	"kind": "CompetencyFramework",
 	"metadata": {"name": "eng"},
 	"spec": {
+		"levels": ["IC2", "IC3"],
 		"competencies": [
-			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership", "own"]},
-			{"id": "collab.planning", "title": "Plans", "tokens": ["planning", "plan"]},
+			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership", "own"], "levels": {"IC2": "o2", "IC3": "o3"}},
+			{"id": "collab.planning", "title": "Plans", "tokens": ["planning", "plan"], "levels": {"IC3": "p3"}},
 			{"id": "scope.crossteam", "title": "Spans", "tokens": ["crossteam", "xteam"]},
 		],
-		"roles": [{
-			"name": "platform-engineer",
-			"levels": [
-				{"name": "L2", "expects": ["delivery.ownership"]},
-				{"name": "L3", "inherits": "L2", "expects": ["collab.planning"]},
-			],
-		}],
 	},
 }
 
-person(name, aliases, fw, role, level) := {
+person(name, aliases, fw, level) := {
 	"apiVersion": "mgmt/v1alpha1",
 	"kind": "Person",
 	"metadata": {"name": name},
 	"spec": {
 		"aliases": aliases,
 		"framework": fw,
-		"role": role,
 		"level": level,
 		"since": "2026-05-01",
 	},
 }
 
-cycle(fw, people) := {
+cycle_with(selector) := {
 	"apiVersion": "mgmt/v1alpha1",
 	"kind": "ReviewCycle",
 	"metadata": {"name": "h2"},
 	"spec": {
-		"framework": fw,
 		"period": {"from": "2026-04-01", "to": "2026-09-30"},
-		"selector": {"people": people},
+		"selector": selector,
 		"milestones": [],
 	},
 }
 
+cycle(people) := cycle_with({"people": people})
+
 sources := {
 	"CompetencyFramework/eng": {"file": "resources/framework.yaml", "line": 1},
+	"CompetencyFramework/core": {"file": "resources/core.yaml", "line": 1},
 	"Person/sam": {"file": "resources/people.yaml", "line": 1},
 	"Person/priya": {"file": "resources/people.yaml", "line": 12},
 	"ReviewCycle/h2": {"file": "resources/cycle.yaml", "line": 3},
 }
 
-sam := person("sam", ["Sam", "Samuel"], "eng", "platform-engineer", "L3")
+sam := person("sam", ["Sam", "Samuel"], "eng", "IC3")
 
-priya := person("priya", ["Priya"], "eng", "platform-engineer", "L2")
+priya := person("priya", ["Priya"], "eng", "IC2")
 
 doc(fw, people, cycles) := {
 	"now": "2026-10-21",
@@ -67,11 +62,9 @@ doc(fw, people, cycles) := {
 	"sources": sources,
 }
 
-valid := doc({"eng": framework}, {"sam": sam, "priya": priya}, {"h2": cycle("eng", ["sam", "priya"])})
+valid := doc({"eng": framework}, {"sam": sam, "priya": priya}, {"h2": cycle(["sam", "priya"])})
 
 ids(findings) := {f.id | some f in findings}
-
-with_level(fw, i, level) := json.patch(fw, [{"op": "replace", "path": sprintf("/spec/roles/0/levels/%d", [i]), "value": level}])
 
 with_comp(fw, i, comp) := json.patch(fw, [{"op": "replace", "path": sprintf("/spec/competencies/%d", [i]), "value": comp}])
 
@@ -88,7 +81,7 @@ test_empty_input_has_no_denies if {
 # --- ref-unknown ----------------------------------------------------------
 
 test_ref_unknown_person_framework if {
-	d := doc({"eng": framework}, {"sam": person("sam", [], "nope", "platform-engineer", "L3")}, {})
+	d := doc({"eng": framework}, {"sam": person("sam", [], "nope", "IC3")}, {})
 	fs := core.deny with input as d
 	some f in fs
 	f.id == "ref-unknown"
@@ -100,39 +93,30 @@ test_ref_unknown_person_framework if {
 	count(fs) == 1
 }
 
-test_ref_unknown_person_role if {
-	d := doc({"eng": framework}, {"sam": person("sam", [], "eng", "nope", "L3")}, {})
-	fs := core.deny with input as d
-	some f in fs
-	f.id == "ref-unknown"
-	contains(f.message, `role "nope"`)
-	count(fs) == 1
-}
-
-test_ref_unknown_person_level if {
-	d := doc({"eng": framework}, {"priya": person("priya", [], "eng", "platform-engineer", "L9")}, {})
+test_ref_unknown_person_level_off_ladder if {
+	d := doc({"eng": framework}, {"priya": person("priya", [], "eng", "IC9")}, {})
 	fs := core.deny with input as d
 	some f in fs
 	f.id == "ref-unknown"
 	f.person == "priya"
 	f.line == 12
-	contains(f.message, `level "L9"`)
+	f.message == `person "priya": level "IC9" is not on the ladder of framework "eng" (IC2, IC3)`
 	count(fs) == 1
 }
 
-test_ref_unknown_cycle_framework if {
-	d := doc({"eng": framework}, {"sam": sam}, {"h2": cycle("nope", ["sam"])})
+test_ref_unknown_cycle_match_frameworks if {
+	d := doc({"eng": framework}, {"sam": sam}, {"h2": cycle_with({"matchFrameworks": ["eng", "nope"]})})
 	fs := core.deny with input as d
 	some f in fs
 	f.id == "ref-unknown"
 	f.file == "resources/cycle.yaml"
 	f.line == 3
-	contains(f.message, `framework "nope"`)
+	f.message == `review cycle "h2": selector names unknown framework "nope"`
 	count(fs) == 1
 }
 
 test_ref_unknown_cycle_selector_person if {
-	d := doc({"eng": framework}, {"sam": sam}, {"h2": cycle("eng", ["sam", "ghost"])})
+	d := doc({"eng": framework}, {"sam": sam}, {"h2": cycle(["sam", "ghost"])})
 	fs := core.deny with input as d
 	some f in fs
 	f.id == "ref-unknown"
@@ -141,38 +125,8 @@ test_ref_unknown_cycle_selector_person if {
 	count(fs) == 1
 }
 
-test_ref_unknown_inherits_missing if {
-	fw := with_level(framework, 1, {"name": "L3", "inherits": "L1"})
-	fs := core.deny with input as doc({"eng": fw}, {}, {})
-	some f in fs
-	f.id == "ref-unknown"
-	f.file == "resources/framework.yaml"
-	f.line == 1
-	f.person == ""
-	contains(f.message, `inherits unknown level "L1"`)
-	count(fs) == 1
-}
-
-test_ref_unknown_inherits_loop if {
-	fw := with_level(framework, 0, {"name": "L2", "inherits": "L3"})
-	fs := core.deny with input as doc({"eng": fw}, {}, {})
-	some f in fs
-	f.id == "ref-unknown"
-	f.file == "resources/framework.yaml"
-	contains(f.message, "L2, L3")
-	contains(f.message, "loop")
-	count(fs) == 1
-}
-
-test_ref_unknown_self_inherit_loop if {
-	fw := with_level(framework, 0, {"name": "L2", "inherits": "L2"})
-	fs := core.deny with input as doc({"eng": fw}, {}, {})
-	ids(fs) == {"ref-unknown"}
-	count(fs) == 1
-}
-
 test_ref_unknown_missing_source_still_reported if {
-	d := json.patch(doc({"eng": framework}, {"zed": person("zed", [], "nope", "x", "y")}, {}), [{"op": "replace", "path": "/sources", "value": {}}])
+	d := json.patch(doc({"eng": framework}, {"zed": person("zed", [], "nope", "y")}, {}), [{"op": "replace", "path": "/sources", "value": {}}])
 	fs := core.deny with input as d
 	some f in fs
 	f.id == "ref-unknown"
@@ -214,10 +168,46 @@ test_token_duplicate_not_for_shared_suffix_alone if {
 	count(core.deny) == 0 with input as doc({"eng": fw2}, {}, {})
 }
 
+# Token collisions across includes are token-duplicate at the including
+# framework; a collision inside an included framework is reported there only.
+core_fw := {
+	"kind": "CompetencyFramework",
+	"metadata": {"name": "core"},
+	"spec": {"levels": ["IC2", "IC3"], "competencies": [{"id": "core.comms", "title": "Talks", "tokens": ["comms"]}]},
+}
+
+test_token_duplicate_across_includes if {
+	eng := json.patch(framework, [
+		{"op": "add", "path": "/spec/includes", "value": ["core"]},
+		{"op": "replace", "path": "/spec/competencies/2/tokens", "value": ["crossteam", "comms"]},
+	])
+	fs := core.deny with input as doc({"eng": eng, "core": core_fw}, {}, {})
+	some f in fs
+	f.id == "token-duplicate"
+	f.file == "resources/framework.yaml"
+	f.message == `token "comms" is claimed by core.comms, scope.crossteam`
+	count(fs) == 1
+}
+
+test_token_duplicate_inside_include_reported_once if {
+	dup := json.patch(core_fw, [{"op": "add", "path": "/spec/competencies/-", "value": {"id": "core.chat", "title": "Chats", "tokens": ["comms"]}}])
+	eng := json.patch(framework, [{"op": "add", "path": "/spec/includes", "value": ["core"]}])
+	fs := core.deny with input as doc({"eng": eng, "core": dup}, {}, {})
+	some f in fs
+	f.id == "token-duplicate"
+	f.file == "resources/core.yaml"
+	count(fs) == 1
+}
+
+test_includes_without_collision_are_clean if {
+	eng := json.patch(framework, [{"op": "add", "path": "/spec/includes", "value": ["core"]}])
+	count(core.deny) == 0 with input as doc({"eng": eng, "core": core_fw}, {"sam": sam}, {"h2": cycle_with({"matchFrameworks": ["core"]})})
+}
+
 # --- alias-duplicate ------------------------------------------------------
 
 test_alias_duplicate_alias if {
-	p := person("priya", ["Priya", "SAM"], "eng", "platform-engineer", "L2")
+	p := person("priya", ["Priya", "SAM"], "eng", "IC2")
 	fs := core.deny with input as doc({"eng": framework}, {"sam": sam, "priya": p}, {})
 	some f in fs
 	f.id == "alias-duplicate"
@@ -259,33 +249,4 @@ test_lib_min_max_date if {
 
 test_lib_finding if {
 	lib.finding("x", "sam", "f.md", 3, "m") == {"id": "x", "person": "sam", "file": "f.md", "line": 3, "message": "m", "msg": "m"}
-}
-
-# --- ref-unknown: level expects/removes -----------------------------------
-
-test_ref_unknown_level_expects if {
-	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "expects": ["collab.nope"]})
-	fs := core.deny with input as doc({"eng": fw}, {}, {})
-	some f in fs
-	f.id == "ref-unknown"
-	f.person == ""
-	f.file == "resources/framework.yaml"
-	f.line == 1
-	contains(f.message, `level "L3" expects unknown competency "collab.nope"`)
-	contains(f.message, `role "platform-engineer"`)
-	count(fs) == 1
-}
-
-test_ref_unknown_level_removes if {
-	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "removes": ["delivery.nope"]})
-	fs := core.deny with input as doc({"eng": fw}, {}, {})
-	some f in fs
-	f.id == "ref-unknown"
-	contains(f.message, `level "L3" removes unknown competency "delivery.nope"`)
-	count(fs) == 1
-}
-
-test_known_level_expects_and_removes_do_not_fire if {
-	fw := with_level(framework, 1, {"name": "L3", "inherits": "L2", "expects": ["collab.planning"], "removes": ["delivery.ownership"]})
-	count(core.deny) == 0 with input as doc({"eng": fw}, {}, {})
 }

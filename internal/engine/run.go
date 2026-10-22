@@ -69,7 +69,7 @@ func Run(root string, opts Options) (*Result, error) {
 	return res, nil
 }
 
-// extractFacts fills f with resources, sources and the records extracted
+// extractFacts fills f with resources, sources, effective frameworks and the records extracted
 // from the Workspace's notes, and returns the extraction diagnostics as
 // findings (Run copies them back into f.Diagnostics).
 func extractFacts(root string, resources []load.Resource, f *facts.Facts) ([]facts.Finding, error) {
@@ -89,6 +89,7 @@ func extractFacts(root string, resources []load.Resource, f *facts.Facts) ([]fac
 			ws = facts.Source{File: r.File, Line: r.Line}
 		}
 	}
+	f.Frameworks = extract.Frameworks(resources)
 	notes, err := load.LoadNotes(root, glob)
 	if errors.Is(err, doublestar.ErrBadPattern) {
 		return []facts.Finding{{Severity: "error", ID: "schema-invalid", File: ws.File, Line: ws.Line,

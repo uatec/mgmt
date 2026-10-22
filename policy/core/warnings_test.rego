@@ -9,17 +9,22 @@ framework := {
 	"kind": "CompetencyFramework",
 	"metadata": {"name": "eng"},
 	"spec": {
+		"levels": ["IC2", "IC3"],
 		"competencies": [
-			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"]},
-			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"]},
+			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"], "levels": {"IC2": "o2", "IC3": "o3"}},
+			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"], "levels": {"IC3": "p3"}},
 		],
-		"roles": [{
-			"name": "platform-engineer",
-			"levels": [
-				{"name": "L2", "expects": ["delivery.ownership"]},
-				{"name": "L3", "inherits": "L2", "expects": ["collab.planning"]},
-			],
-		}],
+	},
+}
+
+# effective is framework as facts.frameworks carries it (Decision N).
+effective := {
+	"levels": framework.spec.levels,
+	"competencies": {c.id: {
+		"id": c.id, "title": c.title, "theme": split(c.id, ".")[0],
+		"summary": "", "levels": c.levels,
+	} |
+		some c in framework.spec.competencies
 	},
 }
 
@@ -27,7 +32,7 @@ sam := {
 	"apiVersion": "mgmt/v1alpha1",
 	"kind": "Person",
 	"metadata": {"name": "sam"},
-	"spec": {"framework": "eng", "role": "platform-engineer", "level": "L3", "since": "2026-05-01"},
+	"spec": {"framework": "eng", "level": "IC3", "since": "2026-05-01"},
 }
 
 workspace := {
@@ -42,7 +47,6 @@ h2 := {
 	"kind": "ReviewCycle",
 	"metadata": {"name": "h2"},
 	"spec": {
-		"framework": "eng",
 		"period": {"from": "2026-04-01", "to": "2026-09-30"},
 		"selector": {"people": ["sam"]},
 		"inputs": [{"name": "self-assessment", "required": true}, {"name": "okrs"}],
@@ -72,6 +76,7 @@ quiet := {
 	"now": "2026-10-21",
 	"options": {"cycle": ""},
 	"resources": {"Workspace": {"ws": workspace}, "CompetencyFramework": {"eng": framework}, "Person": {"sam": sam}, "ReviewCycle": {}},
+	"frameworks": {"eng": effective},
 	"sources": {
 		"Person/sam": {"file": "resources/people.yaml", "line": 1},
 		"ReviewCycle/h2": {"file": "resources/cycle.yaml", "line": 1},

@@ -3,10 +3,9 @@ kind: ReviewCycle
 metadata:
   name: ensek-2026-h2
 spec:
-  framework: eng
   period: { from: 2026-04-01, to: 2026-09-30 }    # evidence window
   selector:
-    people: [sam, priya, jo]     # or matchRoles: [platform-engineer]
+    people: [sam, priya, jo]     # or matchFrameworks: [eng]
   evidence:
     minPerCompetency: 1
     negativeOverrides: true

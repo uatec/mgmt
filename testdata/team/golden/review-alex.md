@@ -1,6 +1,6 @@
 # Review evidence: Alex Example — last 90d
 
-platform-engineer L2 · window 2026-09-01 to 2026-10-21
+eng IC2 · window 2026-09-01 to 2026-10-21
 
 ## collab
 

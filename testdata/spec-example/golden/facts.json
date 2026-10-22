@@ -57,6 +57,44 @@
       "text": "unblocked the SRE handover"
     }
   ],
+  "frameworks": {
+    "eng": {
+      "competencies": {
+        "collab.planning": {
+          "id": "collab.planning",
+          "levels": {
+            "IC3": "Shapes the plan for their area, sizing work and naming risks up front."
+          },
+          "summary": "",
+          "theme": "collab",
+          "title": "Contributes actively to planning and refinement"
+        },
+        "delivery.ownership": {
+          "id": "delivery.ownership",
+          "levels": {
+            "IC2": "Sees their own tasks through to done and raises blockers early.",
+            "IC3": "Owns a whole piece of work from idea to follow-up without being chased."
+          },
+          "summary": "",
+          "theme": "delivery",
+          "title": "Owns outcomes end to end"
+        },
+        "scope.crossteam": {
+          "id": "scope.crossteam",
+          "levels": {
+            "IC3": "Delivers changes that need agreement and work from more than one team."
+          },
+          "summary": "",
+          "theme": "scope",
+          "title": "Delivers work that spans teams"
+        }
+      },
+      "levels": [
+        "IC2",
+        "IC3"
+      ]
+    }
+  },
   "ignores": [],
   "inputs": [
     {
@@ -84,6 +122,10 @@
           "competencies": [
             {
               "id": "delivery.ownership",
+              "levels": {
+                "IC2": "Sees their own tasks through to done and raises blockers early.",
+                "IC3": "Owns a whole piece of work from idea to follow-up without being chased."
+              },
               "title": "Owns outcomes end to end",
               "tokens": [
                 "ownership",
@@ -92,6 +134,9 @@
             },
             {
               "id": "collab.planning",
+              "levels": {
+                "IC3": "Shapes the plan for their area, sizing work and naming risks up front."
+              },
               "title": "Contributes actively to planning and refinement",
               "tokens": [
                 "planning",
@@ -100,6 +145,9 @@
             },
             {
               "id": "scope.crossteam",
+              "levels": {
+                "IC3": "Delivers changes that need agreement and work from more than one team."
+              },
               "title": "Delivers work that spans teams",
               "tokens": [
                 "crossteam",
@@ -107,27 +155,9 @@
               ]
             }
           ],
-          "roles": [
-            {
-              "levels": [
-                {
-                  "expects": [
-                    "delivery.ownership"
-                  ],
-                  "name": "L2"
-                },
-                {
-                  "expects": [
-                    "collab.planning",
-                    "scope.crossteam"
-                  ],
-                  "inherits": "L2",
-                  "name": "L3",
-                  "removes": []
-                }
-              ],
-              "name": "platform-engineer"
-            }
+          "levels": [
+            "IC2",
+            "IC3"
           ]
         }
       }
@@ -145,8 +175,7 @@
           ],
           "displayName": "Jo Example",
           "framework": "eng",
-          "level": "L3",
-          "role": "platform-engineer",
+          "level": "IC3",
           "since": "2026-05-01"
         }
       },
@@ -162,8 +191,7 @@
           ],
           "displayName": "Priya Example",
           "framework": "eng",
-          "level": "L2",
-          "role": "platform-engineer",
+          "level": "IC2",
           "since": "2026-05-01"
         }
       },
@@ -180,9 +208,8 @@
           ],
           "displayName": "Sam Example",
           "framework": "eng",
-          "level": "L3",
+          "level": "IC3",
           "oneToOneCadence": "7d",
-          "role": "platform-engineer",
           "since": "2026-05-01"
         }
       }
@@ -199,7 +226,6 @@
             "minPerCompetency": 1,
             "negativeOverrides": true
           },
-          "framework": "eng",
           "inputs": [
             {
               "name": "self-assessment",
@@ -295,11 +321,11 @@
     },
     "Person/jo": {
       "file": "resources/people.yaml",
-      "line": 26
+      "line": 24
     },
     "Person/priya": {
       "file": "resources/people.yaml",
-      "line": 14
+      "line": 13
     },
     "Person/sam": {
       "file": "resources/people.yaml",

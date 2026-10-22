@@ -1,20 +1,33 @@
+# Competency frameworks: a competency x level matrix. A competency is
+# required for a person when it has a descriptor at their level. These
+# descriptors are examples: replace them with your own framework's.
 apiVersion: mgmt/v1alpha1
 kind: CompetencyFramework
 metadata:
-  name: eng
+  name: core
 spec:
+  levels: [IC1, IC2, IC3]       # ordered ladder, lowest first
   competencies:
-    - id: delivery.ownership
+    - id: core.ownership
       title: Owns outcomes end to end
-      tokens: [ownership, own]
-    - id: collab.planning
+      tokens: [ownership, own]  # write +ownership, -own, ~ownership in notes
+      summary: Takes responsibility for results, not just tasks.
+      levels:
+        IC1: Finishes the tasks they pick up and says early when they are stuck.
+        IC2: Sees their own work through to done, including the follow-up.
+        IC3: Owns a whole piece of work from idea to outcome without being chased.
+---
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
+  name: software-engineering
+spec:
+  includes: [core]              # core competencies are shared, not copied
+  levels: [IC1, IC2, IC3]       # must match every included framework
+  competencies:
+    - id: eng.planning
       title: Contributes actively to planning and refinement
       tokens: [planning, plan]
-  roles:
-    - name: engineer
-      levels:
-        - name: L1
-          expects: [delivery.ownership]
-        - name: L2
-          inherits: L1
-          expects: [collab.planning]
+      levels:                   # no IC1 descriptor: not required at IC1
+        IC2: Breaks their own work into clear, sized steps.
+        IC3: Shapes the plan for their area and names risks up front.

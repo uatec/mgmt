@@ -5,7 +5,7 @@
 ## Errors
 
 - **alias-duplicate**
-  - alexander: name or alias "alex" is shared by alex, alexander (resources/people.yaml:45)
+  - alexander: name or alias "alex" is shared by alex, alexander (resources/people.yaml:41)
 - **date-unresolved**
   - no date in the file name or its first-level heading (notes/misc.md:1)
 - **evidence-in-action**
@@ -21,7 +21,7 @@
 - **person-unknown**
   - unknown person "samm" (did you mean "sam"?) (notes/2026-W43.md:6)
 - **ref-unknown**
-  - jo: person "jo": unknown level "L9" for role "platform-engineer" (resources/people.yaml:23)
+  - jo: person "jo": level "IC9" is not on the ladder of framework "eng" (IC2, IC3) (resources/people.yaml:21)
 - **token-duplicate**
   - token "plan" is claimed by collab.planning, scope.crossteam (resources/framework.yaml:1)
 - **token-unknown**
@@ -30,20 +30,20 @@
 ## alex
 
 - **competency-untouched**
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:34)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:31)
 - **gap-unaddressed**
-  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:34)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:31)
 - **oneonone-overdue**
-  - no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:34)
+  - no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:31)
 
 ## alexander
 
 - **competency-untouched**
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:45)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:41)
 - **gap-unaddressed**
-  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:45)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:41)
 - **oneonone-overdue**
-  - no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:45)
+  - no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:41)
 
 ## jo
 
@@ -52,20 +52,20 @@
   - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
 - **oneonone-overdue**
-  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:23)
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:21)
 
 ## priya
 
 - **competency-untouched**
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:12)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:11)
 - **cycle-input-missing**
   - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
 - **gap-unaddressed**
-  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:12)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:11)
 - **oneonone-overdue**
-  - no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:12)
+  - no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:11)
 
 ## sam
 

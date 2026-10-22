@@ -6,7 +6,6 @@ spec:
   displayName: Sam Example
   aliases: [Sam, Samuel]        # header names that resolve to this person
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-05-01             # start of managing them; evidence before this is ignored
   oneToOneCadence: 7d           # optional override

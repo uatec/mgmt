@@ -391,7 +391,7 @@ func TestPrepTemplateBranches(t *testing.T) {
 // cycle uses.
 func TestExplainCountingRule(t *testing.T) {
 	view := map[string]any{
-		"person":     map[string]any{"name": "sam", "role": "platform-engineer", "level": "L3"},
+		"person":     map[string]any{"name": "sam", "framework": "eng", "level": "IC3"},
 		"competency": map[string]any{"id": "collab.planning", "title": "Plans"},
 		"required":   false, "status": "proven", "rule": "counting", "positives": 2, "negatives": 1,
 		"settings": map[string]any{"minPerCompetency": 2, "negativeOverrides": false},
@@ -406,7 +406,7 @@ func TestExplainCountingRule(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, want := range []string{
-		"Required: no (platform-engineer L3)\n",
+		"Required: no (eng IC3)\n",
 		"Rule: counting: proven when positives exceed negatives and reach 2 (2 positive, 1 negative)\n",
 		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
 		"- 2026-09-01 - · t (notes/a.md:3)\n\n## Outside window\n- none\n",

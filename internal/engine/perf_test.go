@@ -32,21 +32,26 @@ kind: CompetencyFramework
 metadata:
   name: eng
 spec:
+  includes: [core]
+  levels: [IC1]
   competencies:
-    - { id: delivery.ownership, title: Ownership, tokens: [ownership] }
-    - { id: collab.planning, title: Planning, tokens: [planning] }
-    - { id: scope.crossteam, title: Cross team, tokens: [crossteam] }
-  roles:
-    - name: engineer
-      levels:
-        - name: L1
-          expects: [delivery.ownership, collab.planning, scope.crossteam]
+    - { id: delivery.ownership, title: Ownership, tokens: [ownership], levels: {IC1: owns it} }
+    - { id: scope.crossteam, title: Cross team, tokens: [crossteam], levels: {IC1: spans teams} }
+---
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
+  name: core
+spec:
+  levels: [IC1]
+  competencies:
+    - { id: collab.planning, title: Planning, tokens: [planning], levels: {IC1: plans} }
 `)
 	var people strings.Builder
 	names := make([]string, 10)
 	for i := range names {
 		names[i] = fmt.Sprintf("person%d", i)
-		fmt.Fprintf(&people, "---\napiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: %s\nspec:\n  displayName: Person %d\n  aliases: [P%d]\n  framework: eng\n  role: engineer\n  level: L1\n  since: 2026-01-01\n", names[i], i, i)
+		fmt.Fprintf(&people, "---\napiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: %s\nspec:\n  displayName: Person %d\n  aliases: [P%d]\n  framework: eng\n  level: IC1\n  since: 2026-01-01\n", names[i], i, i)
 	}
 	write("resources/people.yaml", people.String()[4:])
 	for w := 1; w <= 52; w++ {

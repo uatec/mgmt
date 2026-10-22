@@ -78,15 +78,15 @@
     {
       "file": "resources/people.yaml",
       "id": "ref-unknown",
-      "line": 23,
-      "message": "person \"jo\": unknown level \"L9\" for role \"platform-engineer\"",
+      "line": 21,
+      "message": "person \"jo\": level \"IC9\" is not on the ladder of framework \"eng\" (IC2, IC3)",
       "person": "jo",
       "severity": "error"
     },
     {
       "file": "resources/people.yaml",
       "id": "alias-duplicate",
-      "line": 45,
+      "line": 41,
       "message": "name or alias \"alex\" is shared by alex, alexander",
       "person": "alexander",
       "severity": "error"
@@ -216,7 +216,7 @@
     {
       "file": "resources/people.yaml",
       "id": "competency-untouched",
-      "line": 12,
+      "line": 11,
       "message": "priya: required competency delivery.ownership never touched; nothing in the last 42 days",
       "person": "priya",
       "severity": "warning"
@@ -224,7 +224,7 @@
     {
       "file": "resources/people.yaml",
       "id": "gap-unaddressed",
-      "line": 12,
+      "line": 11,
       "message": "priya: gap delivery.ownership (unproven) has no open action addressing it",
       "person": "priya",
       "severity": "warning"
@@ -232,7 +232,7 @@
     {
       "file": "resources/people.yaml",
       "id": "oneonone-overdue",
-      "line": 12,
+      "line": 11,
       "message": "no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d)",
       "person": "priya",
       "severity": "warning"
@@ -240,7 +240,7 @@
     {
       "file": "resources/people.yaml",
       "id": "oneonone-overdue",
-      "line": 23,
+      "line": 21,
       "message": "no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)",
       "person": "jo",
       "severity": "warning"
@@ -248,7 +248,7 @@
     {
       "file": "resources/people.yaml",
       "id": "competency-untouched",
-      "line": 34,
+      "line": 31,
       "message": "alex: required competency delivery.ownership never touched; nothing in the last 42 days",
       "person": "alex",
       "severity": "warning"
@@ -256,7 +256,7 @@
     {
       "file": "resources/people.yaml",
       "id": "gap-unaddressed",
-      "line": 34,
+      "line": 31,
       "message": "alex: gap delivery.ownership (unproven) has no open action addressing it",
       "person": "alex",
       "severity": "warning"
@@ -264,7 +264,7 @@
     {
       "file": "resources/people.yaml",
       "id": "oneonone-overdue",
-      "line": 34,
+      "line": 31,
       "message": "no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d)",
       "person": "alex",
       "severity": "warning"
@@ -272,7 +272,7 @@
     {
       "file": "resources/people.yaml",
       "id": "competency-untouched",
-      "line": 45,
+      "line": 41,
       "message": "alexander: required competency delivery.ownership never touched; nothing in the last 42 days",
       "person": "alexander",
       "severity": "warning"
@@ -280,7 +280,7 @@
     {
       "file": "resources/people.yaml",
       "id": "gap-unaddressed",
-      "line": 45,
+      "line": 41,
       "message": "alexander: gap delivery.ownership (unproven) has no open action addressing it",
       "person": "alexander",
       "severity": "warning"
@@ -288,7 +288,7 @@
     {
       "file": "resources/people.yaml",
       "id": "oneonone-overdue",
-      "line": 45,
+      "line": 41,
       "message": "no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d)",
       "person": "alexander",
       "severity": "warning"

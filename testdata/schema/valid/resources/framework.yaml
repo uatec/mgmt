@@ -1,24 +1,33 @@
 apiVersion: mgmt/v1alpha1
 kind: CompetencyFramework
 metadata:
+  name: core
+spec:
+  levels: [IC2, IC3]
+  competencies:
+    - id: collab.planning
+      title: Contributes actively to planning and refinement
+      tokens: [planning, plan]
+      summary: Helps the team decide what to do next and why.
+      levels:
+        IC3: Shapes the plan for their area and spots risks early.
+---
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
   name: eng
 spec:
+  includes: [core]              # core competencies, shared rather than copied
+  levels: [IC2, IC3]            # ordered ladder; must match every include
   competencies:
     - id: delivery.ownership
       title: Owns outcomes end to end
       tokens: [ownership, own]
-    - id: collab.planning
-      title: Contributes actively to planning and refinement
-      tokens: [planning, plan]
+      levels:                   # a competency is required where it has a descriptor
+        IC2: Sees their own tasks through to done.
+        IC3: Sees a whole piece of work through, including follow-up.
     - id: scope.crossteam
       title: Delivers work that spans teams
       tokens: [crossteam, xteam]
-  roles:
-    - name: platform-engineer
       levels:
-        - name: L2
-          expects: [delivery.ownership]
-        - name: L3
-          inherits: L2
-          expects: [collab.planning, scope.crossteam]
-          removes: []           # optional: drop an inherited expectation
+        IC3: Delivers changes that need more than one team.

@@ -3,10 +3,10 @@ kind: ReviewCycle
 metadata:
   name: example-2026-h2
 spec:
-  framework: eng
   period: { from: 2026-07-01, to: 2026-12-31 }
   selector:
-    people: [alex, robin]
+    matchFrameworks: [core]     # everyone whose framework is or includes core
+    # people: [alex, robin]     # or name people
   evidence:
     minPerCompetency: 1
     negativeOverrides: true

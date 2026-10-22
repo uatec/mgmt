@@ -9,31 +9,35 @@ framework := {
 	"kind": "CompetencyFramework",
 	"metadata": {"name": "eng"},
 	"spec": {
+		"levels": ["IC2", "IC3", "IC4"],
 		"competencies": [
-			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"]},
-			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"]},
-			{"id": "scope.crossteam", "title": "Spans", "tokens": ["crossteam"]},
+			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"], "summary": "Owns results", "levels": {"IC2": "own2", "IC3": "own3", "IC4": "own4"}},
+			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"], "levels": {"IC3": "plan3", "IC4": "plan4"}},
+			{"id": "scope.crossteam", "title": "Spans", "tokens": ["crossteam"], "levels": {"IC3": "span3", "IC4": "span4"}},
 			{"id": "collab.mentoring", "title": "Mentors"},
 		],
-		"roles": [{
-			"name": "platform-engineer",
-			"levels": [
-				{"name": "L2", "expects": ["delivery.ownership"]},
-				{"name": "L3", "inherits": "L2", "expects": ["collab.planning", "scope.crossteam"]},
-				{"name": "L4", "inherits": "L3"},
-			],
-		}],
 	},
 }
 
-person(role, level, since) := {
+# effective(fw) is the facts.frameworks entry for a framework without includes.
+effective(fw) := {
+	"levels": fw.spec.levels,
+	"competencies": {c.id: {
+		"id": c.id, "title": c.title, "theme": split(c.id, ".")[0],
+		"summary": object.get(c, "summary", ""), "levels": object.get(c, "levels", {}),
+	} |
+		some c in fw.spec.competencies
+	},
+}
+
+person(level, since) := {
 	"apiVersion": "mgmt/v1alpha1",
 	"kind": "Person",
 	"metadata": {"name": "sam"},
-	"spec": {"framework": "eng", "role": role, "level": level, "since": since},
+	"spec": {"framework": "eng", "level": level, "since": since},
 }
 
-sam := person("platform-engineer", "L3", "2026-01-01")
+sam := person("IC3", "2026-01-01")
 
 workspace := {"kind": "Workspace", "metadata": {"name": "ws"}, "spec": {"notes": "notes/*.md", "me": [], "defaultWindow": "90d"}}
 
@@ -42,7 +46,6 @@ h2 := {
 	"kind": "ReviewCycle",
 	"metadata": {"name": "ensek-2026-h2"},
 	"spec": {
-		"framework": "eng",
 		"period": {"from": "2026-04-01", "to": "2026-09-30"},
 		"selector": {"people": ["sam"]},
 		"inputs": [
@@ -61,6 +64,7 @@ doc(fw, people, cycles) := {
 	"now": "2026-10-21",
 	"options": {"cycle": ""},
 	"resources": {"Workspace": {"ws": workspace}, "CompetencyFramework": {"eng": fw}, "Person": people, "ReviewCycle": cycles},
+	"frameworks": {"eng": effective(fw)},
 	"sources": {},
 	"evidence": [],
 	"touches": [],
@@ -72,8 +76,6 @@ doc(fw, people, cycles) := {
 no_cycle := doc(framework, {"sam": sam}, {})
 
 with_cycle := doc(framework, {"sam": sam}, {"ensek-2026-h2": h2})
-
-with_levels(levels) := json.patch(framework, [{"op": "replace", "path": "/spec/roles/0/levels", "value": levels}])
 
 # ev(polarity, date, file, line) is an evidence record for sam's ownership.
 ev(pol, date, file, line) := {
@@ -99,44 +101,40 @@ own_status(d) := s if {
 
 # --- required -------------------------------------------------------------
 
-test_required_inherits if {
+test_required_at_level_is_competencies_with_a_descriptor if {
 	derive.required.sam == ["collab.planning", "delivery.ownership", "scope.crossteam"] with input as no_cycle
+	derive.required.sam == ["delivery.ownership"] with input as doc(framework, {"sam": person("IC2", "2026-01-01")}, {})
 }
 
-test_required_removes if {
-	fw := with_levels([
-		{"name": "L2", "expects": ["delivery.ownership"]},
-		{"name": "L3", "inherits": "L2", "expects": ["collab.planning", "scope.crossteam"], "removes": ["delivery.ownership"]},
-	])
-	derive.required.sam == ["collab.planning", "scope.crossteam"] with input as doc(fw, {"sam": sam}, {})
+test_required_level_off_ladder_is_empty if {
+	d := doc(framework, {"sam": person("IC9", "2026-01-01")}, {})
+	derive.required.sam == [] with input as d
+	not derive.next_level.sam with input as d
+	not derive.descriptor.sam["delivery.ownership"] with input as d
+	derive.status.sam["delivery.ownership"].status == "unproven" with input as d
 }
 
-test_required_readded_above_removal if {
-	fw := with_levels([
-		{"name": "L2", "expects": ["delivery.ownership"]},
-		{"name": "L3", "inherits": "L2", "removes": ["delivery.ownership"]},
-		{"name": "L4", "inherits": "L3", "expects": ["delivery.ownership"]},
-	])
-	derive.required.sam == ["delivery.ownership"] with input as doc(fw, {"sam": person("platform-engineer", "L4", "2026-01-01")}, {})
+test_ladder_level_next_level if {
+	derive.ladder.sam == ["IC2", "IC3", "IC4"] with input as no_cycle
+	derive.level.sam == "IC3" with input as no_cycle
+	derive.next_level.sam == "IC4" with input as no_cycle
+	not derive.next_level.sam with input as doc(framework, {"sam": person("IC4", "2026-01-01")}, {})
 }
 
-test_required_removal_still_applies_below_readd if {
-	fw := with_levels([
-		{"name": "L2", "expects": ["delivery.ownership"]},
-		{"name": "L3", "inherits": "L2", "removes": ["delivery.ownership"]},
-		{"name": "L4", "inherits": "L3"},
-	])
-	derive.required.sam == [] with input as doc(fw, {"sam": person("platform-engineer", "L4", "2026-01-01")}, {})
-}
-
-test_required_unknown_level_is_empty if {
-	derive.required.sam == [] with input as doc(framework, {"sam": person("platform-engineer", "L9", "2026-01-01")}, {})
+test_descriptor_at_current_level if {
+	derive.descriptor.sam["collab.planning"] == "plan3" with input as no_cycle
+	not derive.descriptor.sam["collab.mentoring"] with input as no_cycle
+	derive.descriptor.sam == {"collab.planning": "plan3", "delivery.ownership": "own3", "scope.crossteam": "span3"} with input as no_cycle
 }
 
 # --- competencies ---------------------------------------------------------
 
-test_competencies_have_theme if {
-	derive.competencies.sam["collab.planning"] == {"id": "collab.planning", "title": "Plans", "theme": "collab"} with input as no_cycle
+test_competencies_have_theme_summary_and_levels if {
+	derive.competencies.sam["collab.planning"] == {
+		"id": "collab.planning", "title": "Plans", "theme": "collab", "summary": "",
+		"levels": {"IC3": "plan3", "IC4": "plan4"},
+	} with input as no_cycle
+	derive.competencies.sam["delivery.ownership"].summary == "Owns results" with input as no_cycle
 	count(derive.competencies.sam) == 4 with input as no_cycle
 }
 
@@ -151,13 +149,29 @@ test_window_rolling if {
 }
 
 test_window_raised_to_since if {
-	d := doc(framework, {"sam": person("platform-engineer", "L3", "2026-09-01")}, {})
+	d := doc(framework, {"sam": person("IC3", "2026-09-01")}, {})
 	derive.window.sam == {"from": "2026-09-01", "to": "2026-10-21", "cycle": null} with input as d
 }
 
 test_window_cycle_raised_to_since if {
-	d := doc(framework, {"sam": person("platform-engineer", "L3", "2026-05-01")}, {"ensek-2026-h2": h2})
+	d := doc(framework, {"sam": person("IC3", "2026-05-01")}, {"ensek-2026-h2": h2})
 	derive.window.sam.from == "2026-05-01" with input as d
+}
+
+test_window_clamped_by_level_since if {
+	promoted := object.union(sam, {"spec": {"levelSince": "2026-06-15"}})
+	derive.window.sam == {"from": "2026-06-15", "to": "2026-09-30", "cycle": "ensek-2026-h2"} with input as doc(framework, {"sam": promoted}, {"ensek-2026-h2": h2})
+	derive.window.sam.from == "2026-07-23" with input as doc(framework, {"sam": promoted}, {})
+	late := object.union(sam, {"spec": {"levelSince": "2026-09-01"}})
+	derive.window.sam.from == "2026-09-01" with input as doc(framework, {"sam": late}, {})
+}
+
+test_marks_before_level_since_are_outside if {
+	promoted := object.union(sam, {"spec": {"levelSince": "2026-06-15"}})
+	d := with_evidence(doc(framework, {"sam": promoted}, {"ensek-2026-h2": h2}), [ev(1, "2026-05-02", "n.md", 1), ev(-1, "2026-07-01", "n.md", 2)])
+	[m.line | some m in derive.marks.sam["delivery.ownership"]] == [2] with input as d
+	[m.line | some m in derive.outside.sam["delivery.ownership"]] == [1] with input as d
+	own_status(d).status == "disproven"
 }
 
 test_settings_default_without_cycle if {
@@ -312,11 +326,23 @@ test_active_cycles_option_forces if {
 	derive.cycle.sam == "ensek-2026-h2" with input as d
 }
 
-test_cycle_people_match_roles if {
-	c := object.union(h2, {"spec": {"selector": {"people": ["jo"], "matchRoles": ["platform-engineer"]}}})
-	jo := object.union(sam, {"metadata": {"name": "jo"}, "spec": {"role": "manager"}})
-	d := doc(framework, {"sam": sam, "jo": jo, "al": object.union(sam, {"metadata": {"name": "al"}, "spec": {"role": "other"}})}, {"ensek-2026-h2": c})
-	derive.cycle_people["ensek-2026-h2"] == ["jo", "sam"] with input as d
+on(name, fw) := object.union(sam, {"metadata": {"name": name}, "spec": {"framework": fw}})
+
+# matchFrameworks selects a person whose framework is listed or includes a
+# listed framework, transitively; people still adds named people.
+test_cycle_people_match_frameworks if {
+	core := {"kind": "CompetencyFramework", "metadata": {"name": "core"}, "spec": {"levels": ["IC2"], "competencies": []}}
+	base := {"kind": "CompetencyFramework", "metadata": {"name": "base"}, "spec": {"includes": ["core"], "levels": ["IC2"], "competencies": []}}
+	se := {"kind": "CompetencyFramework", "metadata": {"name": "software-engineering"}, "spec": {"includes": ["base"], "levels": ["IC2"], "competencies": []}}
+	other := {"kind": "CompetencyFramework", "metadata": {"name": "other"}, "spec": {"levels": ["IC2"], "competencies": []}}
+	people := {"sam": on("sam", "software-engineering"), "co": on("co", "core"), "al": on("al", "other"), "jo": on("jo", "other")}
+	c := object.union(h2, {"spec": {"selector": {"people": ["jo"], "matchFrameworks": ["core"]}}})
+	d := json.patch(doc(framework, people, {"ensek-2026-h2": c}), [{"op": "replace", "path": "/resources/CompetencyFramework", "value": {
+		"core": core, "base": base, "software-engineering": se, "other": other,
+	}}])
+	derive.cycle_people["ensek-2026-h2"] == ["co", "jo", "sam"] with input as d
+	only_se := object.union(h2, {"spec": {"selector": {"matchFrameworks": ["software-engineering"]}}})
+	derive.cycle_people["ensek-2026-h2"] == ["sam"] with input as json.patch(d, [{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2", "value": only_se}])
 }
 
 test_cycle_first_by_name if {
@@ -387,6 +413,9 @@ test_missing_framework_person if {
 	derive.cycle.sam == "ensek-2026-h2" with input as d
 	not derive.competencies.sam with input as d
 	not derive.required.sam with input as d
+	not derive.ladder.sam with input as d
+	not derive.next_level.sam with input as d
+	not derive.descriptor.sam with input as d
 	not derive.marks.sam with input as d
 	not derive.outside.sam with input as d
 	not derive.status.sam with input as d

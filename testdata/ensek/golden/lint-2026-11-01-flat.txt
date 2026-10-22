@@ -15,14 +15,14 @@ resources/okrs.yaml:1: warning okr-no-evidence [sam]: sam: OKR "Move static asse
 resources/people.yaml:1: warning competency-untouched [sam]: sam: required competency scope.crossteam last touched 2026-08-03; nothing in the last 42 days
 resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap scope.crossteam (unproven) has no open action addressing it
 resources/people.yaml:1: warning oneonone-overdue [sam]: no 1:1 section for sam since 2026-10-12 (cadence 7d)
-resources/people.yaml:26: warning competency-untouched [jo]: jo: required competency collab.feedback never touched; nothing in the last 42 days
-resources/people.yaml:26: warning competency-untouched [jo]: jo: required competency collab.planning never touched; nothing in the last 42 days
-resources/people.yaml:26: warning competency-untouched [jo]: jo: required competency delivery.ownership never touched; nothing in the last 42 days
-resources/people.yaml:26: warning competency-untouched [jo]: jo: required competency scope.crossteam never touched; nothing in the last 42 days
-resources/people.yaml:26: warning gap-unaddressed [jo]: jo: gap collab.feedback (unproven) has no open action addressing it
-resources/people.yaml:26: warning gap-unaddressed [jo]: jo: gap collab.planning (unproven) has no open action addressing it
-resources/people.yaml:26: warning gap-unaddressed [jo]: jo: gap delivery.ownership (unproven) has no open action addressing it
-resources/people.yaml:26: warning gap-unaddressed [jo]: jo: gap scope.crossteam (unproven) has no open action addressing it
-resources/people.yaml:26: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
-resources/people.yaml:38: warning oneonone-overdue [alex]: no 1:1 section for alex since 2026-10-12 (cadence 14d)
+resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency collab.feedback never touched; nothing in the last 42 days
+resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency collab.planning never touched; nothing in the last 42 days
+resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency delivery.ownership never touched; nothing in the last 42 days
+resources/people.yaml:24: warning competency-untouched [jo]: jo: required competency scope.crossteam never touched; nothing in the last 42 days
+resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap collab.feedback (unproven) has no open action addressing it
+resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap collab.planning (unproven) has no open action addressing it
+resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap delivery.ownership (unproven) has no open action addressing it
+resources/people.yaml:24: warning gap-unaddressed [jo]: jo: gap scope.crossteam (unproven) has no open action addressing it
+resources/people.yaml:24: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
+resources/people.yaml:35: warning oneonone-overdue [alex]: no 1:1 section for alex since 2026-10-12 (cadence 14d)
 0 errors, 27 warnings

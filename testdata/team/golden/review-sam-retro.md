@@ -1,6 +1,6 @@
 # Review evidence: Sam Example — retro-2026-h1
 
-platform-engineer L3 · window 2026-01-05 to 2026-03-31
+eng IC3 · window 2026-01-05 to 2026-03-31
 
 ## collab
 

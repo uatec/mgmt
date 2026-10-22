@@ -5,9 +5,8 @@ metadata:
 spec:
   displayName: Alex Example
   aliases: [Alex]               # names that resolve to this person in notes
-  framework: eng
-  role: engineer
-  level: L2
+  framework: software-engineering
+  level: IC2
   since: 2026-09-01             # when you started managing them
 ---
 apiVersion: mgmt/v1alpha1
@@ -17,7 +16,6 @@ metadata:
 spec:
   displayName: Robin Example
   aliases: [Robin]
-  framework: eng
-  role: engineer
-  level: L1
+  framework: software-engineering
+  level: IC1
   since: 2026-09-01

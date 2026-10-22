@@ -47,22 +47,23 @@ func TestValidateSpecExamples(t *testing.T) {
 }
 
 const (
-	oneComp = "    - {id: a.x, title: X}\n"
+	ladder  = "  levels: [IC1, IC2]\n"
+	oneComp = "    - {id: a.x, title: X, levels: {IC1: does x}}\n"
 	dupComp = oneComp + oneComp
-	roleL1  = "    - name: r\n      levels:\n        - name: L1\n"
 )
 
-// framework is a CompetencyFramework document with the given competency and role list items.
-func framework(comps, roles string) string {
-	return "apiVersion: mgmt/v1alpha1\nkind: CompetencyFramework\nmetadata:\n  name: eng\nspec:\n  competencies:\n" + comps + "  roles:\n" + roles
+// framework is a CompetencyFramework document named name, with extra spec
+// lines (indented two spaces) and competency list items.
+func framework(name, spec, comps string) string {
+	return "apiVersion: mgmt/v1alpha1\nkind: CompetencyFramework\nmetadata:\n  name: " + name + "\nspec:\n" + spec + "  competencies:\n" + comps
 }
 
 func TestValidateSchemaInvalid(t *testing.T) {
 	person := func(extra string) string {
-		return "apiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: sam\nspec:\n  framework: eng\n  role: r\n  level: L2\n  since: 2026-05-01\n" + extra
+		return "apiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: sam\nspec:\n  framework: eng\n  level: IC2\n  since: 2026-05-01\n" + extra
 	}
 	cycle := func(min string) string {
-		return "apiVersion: mgmt/v1alpha1\nkind: ReviewCycle\nmetadata:\n  name: c\nspec:\n  framework: eng\n  period: {from: 2026-04-01, to: 2026-09-30}\n  selector: {people: [sam]}\n  evidence: {minPerCompetency: " + min + "}\n"
+		return "apiVersion: mgmt/v1alpha1\nkind: ReviewCycle\nmetadata:\n  name: c\nspec:\n  period: {from: 2026-04-01, to: 2026-09-30}\n  selector: {people: [sam]}\n  evidence: {minPerCompetency: " + min + "}\n"
 	}
 	tests := []struct {
 		name  string
@@ -80,12 +81,27 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		{"min zero", map[string]string{"b.yaml": cycle("0")}, "resources/b.yaml", 1, ""},
 		{"empty selector", map[string]string{"b.yaml": strings.Replace(cycle("1"), "{people: [sam]}", "{}", 1)}, "resources/b.yaml", 1, ""},
 		{"unknown kind", map[string]string{"b.yaml": "apiVersion: mgmt/v1alpha1\nkind: Team\nmetadata:\n  name: t\nspec: {}\n"}, "resources/b.yaml", 1, ""},
-		{"second doc line", map[string]string{"b.yaml": person("") + "---\n" + strings.Replace(person(""), "sam", "BAD NAME", 1)}, "resources/b.yaml", 11, ""},
+		{"second doc line", map[string]string{"b.yaml": person("") + "---\n" + strings.Replace(person(""), "sam", "BAD NAME", 1)}, "resources/b.yaml", 10, ""},
 		{"two workspaces", map[string]string{"b.yaml": wsYAML}, "resources/b.yaml", 1, ""},
-		{"duplicate competency id", map[string]string{"b.yaml": framework(dupComp, roleL1)}, "resources/b.yaml", 1, `duplicate competency id "a.x"`},
-		{"duplicate role name", map[string]string{"b.yaml": framework(oneComp, roleL1+roleL1)}, "resources/b.yaml", 1, `duplicate role name "r"`},
-		{"duplicate resource name", map[string]string{"b.yaml": person("") + "---\n" + person("")}, "resources/b.yaml", 11, `duplicate Person "sam"`},
-		{"duplicate level name", map[string]string{"b.yaml": framework(oneComp, "    - name: r\n      levels:\n        - name: L1\n        - name: L1\n")}, "resources/b.yaml", 1, `role "r": duplicate level name "L1"`},
+		{"bad levelSince", map[string]string{"b.yaml": person("  levelSince: 2026-02-30\n")}, "resources/b.yaml", 1, "levelSince"},
+		{"role is gone", map[string]string{"b.yaml": person("  role: r\n")}, "resources/b.yaml", 1, "role"},
+		{"cycle framework is gone", map[string]string{"b.yaml": cycle("1") + "  framework: eng\n"}, "resources/b.yaml", 1, "framework"},
+		{"matchRoles is gone", map[string]string{"b.yaml": strings.Replace(cycle("1"), "{people: [sam]}", "{matchRoles: [r]}", 1)}, "resources/b.yaml", 1, "matchFrameworks"},
+		{"framework without ladder", map[string]string{"b.yaml": framework("eng", "", oneComp)}, "resources/b.yaml", 1, "levels"},
+		{"duplicate competency id", map[string]string{"b.yaml": framework("eng", ladder, dupComp)}, "resources/b.yaml", 1, `duplicate competency id "a.x"`},
+		{"duplicate ladder level", map[string]string{"b.yaml": framework("eng", "  levels: [IC1, IC1]\n", oneComp)}, "resources/b.yaml", 1, `spec.levels: duplicate level "IC1"`},
+		{"duplicate resource name", map[string]string{"b.yaml": person("") + "---\n" + person("")}, "resources/b.yaml", 10, `duplicate Person "sam"`},
+		{"unknown include", map[string]string{"b.yaml": framework("eng", ladder+"  includes: [core]\n", oneComp)}, "resources/b.yaml", 1, `spec.includes: unknown framework "core"`},
+		{"include cycle", map[string]string{"b.yaml": framework("eng", ladder+"  includes: [eng]\n", oneComp)}, "resources/b.yaml", 1, `spec.includes: include cycle eng -> eng`},
+		{"ladder differs from include", map[string]string{
+			"b.yaml": framework("eng", ladder+"  includes: [core]\n", oneComp),
+			"c.yaml": framework("core", "  levels: [IC1, IC2, IC3]\n", "    - {id: b.y, title: Why}\n"),
+		}, "resources/b.yaml", 1, `spec.levels: ladder [IC1, IC2] differs from included framework "core" [IC1, IC2, IC3]`},
+		{"descriptor off the ladder", map[string]string{"b.yaml": framework("eng", ladder, "    - {id: a.x, title: X, levels: {IC1: ex, IC9: why}}\n")}, "resources/b.yaml", 1, `competency "a.x": descriptor for level "IC9", which is not on the ladder`},
+		{"duplicate id across include", map[string]string{
+			"b.yaml": framework("eng", ladder+"  includes: [core]\n", oneComp),
+			"c.yaml": framework("core", ladder, oneComp),
+		}, "resources/b.yaml", 1, `duplicate competency id "a.x" across included frameworks: core, eng`},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -118,7 +134,10 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		if err := os.MkdirAll(filepath.Join(root, "resources"), 0o755); err != nil {
 			t.Fatal(err)
 		}
-		body := wsYAML + "---\n" + framework(oneComp+"    - {id: a.y, title: Why}\n", roleL1+"    - name: s\n      levels:\n        - name: L1\n")
+		// A diamond: eng includes core twice over, which is not a duplicate.
+		body := wsYAML + "---\n" + framework("core", ladder, oneComp+"    - {id: a.y, title: Why, summary: s, levels: {IC2: does y}}\n") +
+			"---\n" + framework("base", ladder+"  includes: [core]\n", "    - {id: b.z, title: Zed}\n") +
+			"---\n" + framework("eng", ladder+"  includes: [base, core]\n", "    - {id: e.q, title: Q, tokens: [q], levels: {IC1: q1, IC2: q2}}\n")
 		if err := os.WriteFile(filepath.Join(root, "resources", "a.yaml"), []byte(body), 0o644); err != nil {
 			t.Fatal(err)
 		}

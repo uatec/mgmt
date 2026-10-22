@@ -5,15 +5,15 @@
 ## jo
 
 - **competency-untouched**
-  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:24)
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:24)
-  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:22)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:22)
+  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:22)
 - **cycle-evidence-thin**
   - gaps remain (collab.planning, delivery.ownership, scope.crossteam) and manager-draft for autumn is due 2026-11-01 (resources/cycle.yaml:1)
 - **cycle-input-missing**
   - input self-assessment not recorded for cycle autumn (0 received); peer-nominations is due 2026-10-27 (resources/cycle.yaml:1)
 - **oneonone-overdue**
-  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:24)
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:22)
 
 ## priya
 

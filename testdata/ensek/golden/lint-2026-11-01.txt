@@ -7,15 +7,15 @@
 - **action-overdue**
   - action "write up the restore drill findings" was due 2026-10-23 (notes/2026-W42.md:12)
 - **oneonone-overdue**
-  - no 1:1 section for alex since 2026-10-12 (cadence 14d) (resources/people.yaml:38)
+  - no 1:1 section for alex since 2026-10-12 (cadence 14d) (resources/people.yaml:35)
 
 ## Jo Example (jo)
 
 - **competency-untouched**
-  - required competency collab.feedback never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:26)
+  - required competency collab.feedback never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:24)
 - **cycle-evidence-thin**
   - gaps remain (collab.feedback, collab.planning, delivery.ownership, scope.crossteam) and manager-draft for ensek-2026-h2 is due 2026-11-14 (resources/cycles/ensek-2026-h2.yaml:1)
 - **cycle-input-missing**
@@ -23,12 +23,12 @@
   - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-feedback is due 2026-11-07 (resources/cycles/ensek-2026-h2.yaml:1)
   - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-feedback is due 2026-11-07 (resources/cycles/ensek-2026-h2.yaml:1)
 - **gap-unaddressed**
-  - gap collab.feedback (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap collab.planning (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:26)
+  - gap collab.feedback (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap collab.planning (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:24)
 - **oneonone-overdue**
-  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:26)
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:24)
 
 ## Priya Example (priya)
 

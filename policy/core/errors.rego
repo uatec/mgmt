@@ -17,21 +17,7 @@ _at(kind, name, id, person, message) := lib.finding(id, person, s.file, s.line, 
 	s := _src(kind, name)
 }
 
-_roles(fw) := object.get(fw, ["spec", "roles"], [])
-
-_levels(role) := object.get(role, "levels", [])
-
-_has_role(fw, name) if {
-	some r in _roles(fw)
-	r.name == name
-}
-
-_has_level(fw, role, level) if {
-	some r in _roles(fw)
-	r.name == role
-	some l in _levels(r)
-	l.name == level
-}
+_ladder(fw) := object.get(fw, ["spec", "levels"], [])
 
 # --- ref-unknown ----------------------------------------------------------
 
@@ -44,22 +30,8 @@ deny contains f if {
 deny contains f if {
 	some name, p in _persons
 	fw := _frameworks[p.spec.framework]
-	not _has_role(fw, p.spec.role)
-	f := _at("Person", name, "ref-unknown", name, sprintf("person %q: unknown role %q in framework %q", [name, p.spec.role, p.spec.framework]))
-}
-
-deny contains f if {
-	some name, p in _persons
-	fw := _frameworks[p.spec.framework]
-	_has_role(fw, p.spec.role)
-	not _has_level(fw, p.spec.role, p.spec.level)
-	f := _at("Person", name, "ref-unknown", name, sprintf("person %q: unknown level %q for role %q", [name, p.spec.level, p.spec.role]))
-}
-
-deny contains f if {
-	some name, c in _cycles
-	not _frameworks[c.spec.framework]
-	f := _at("ReviewCycle", name, "ref-unknown", "", sprintf("review cycle %q: unknown framework %q", [name, c.spec.framework]))
+	not p.spec.level in _ladder(fw)
+	f := _at("Person", name, "ref-unknown", name, sprintf("person %q: level %q is not on the ladder of framework %q (%s)", [name, p.spec.level, p.spec.framework, concat(", ", _ladder(fw))]))
 }
 
 deny contains f if {
@@ -70,54 +42,43 @@ deny contains f if {
 }
 
 deny contains f if {
-	some name, fw in _frameworks
-	some r in _roles(fw)
-	some l in _levels(r)
-	l.inherits
-	not _has_level(fw, r.name, l.inherits)
-	f := _at("CompetencyFramework", name, "ref-unknown", "", sprintf("role %q: level %q inherits unknown level %q", [r.name, l.name, l.inherits]))
-}
-
-deny contains f if {
-	some name, fw in _frameworks
-	ids := {c.id | some c in object.get(fw, ["spec", "competencies"], [])}
-	some r in _roles(fw)
-	some l in _levels(r)
-	some field in ["expects", "removes"]
-	some id in object.get(l, field, [])
-	not id in ids
-	f := _at("CompetencyFramework", name, "ref-unknown", "", sprintf("role %q: level %q %s unknown competency %q", [r.name, l.name, field, id]))
-}
-
-# _looping(r) is the set of levels in role r that reach themselves via inherits.
-_looping(r) := {l.name |
-	g := {x.name: {x.inherits | x.inherits} | some x in _levels(r)}
-	some l in _levels(r)
-	l.inherits
-	l.name in graph.reachable(g, {l.inherits})
-}
-
-deny contains f if {
-	some name, fw in _frameworks
-	some r in _roles(fw)
-	loop := _looping(r)
-	count(loop) > 0
-	f := _at("CompetencyFramework", name, "ref-unknown", "", sprintf("role %q: levels %s inherit in a loop", [r.name, concat(", ", sort(loop))]))
+	some name, c in _cycles
+	some fw in object.get(c, ["spec", "selector", "matchFrameworks"], [])
+	not _frameworks[fw]
+	f := _at("ReviewCycle", name, "ref-unknown", "", sprintf("review cycle %q: selector names unknown framework %q", [name, fw]))
 }
 
 # --- token-duplicate ------------------------------------------------------
 
+# A framework's tokens are those of its own competencies and of every
+# framework it includes, transitively.
+_includes := {name: object.get(fw, ["spec", "includes"], []) | some name, fw in _frameworks}
+
+_closure(name) := graph.reachable(_includes, {name})
+
+_comps(name) := [c | some n in _closure(name); some c in object.get(_frameworks, [n, "spec", "competencies"], [])]
+
 _suffix(id) := lower(regex.replace(id, `^.*\.`, ""))
 
-_claims(fw) := {[lower(t), c.id] | some c in fw.spec.competencies; some t in object.get(c, "tokens", [])}
+_claims(name) := {[lower(t), c.id] | some c in _comps(name); some t in object.get(c, "tokens", [])}
+
+# _claimants(name, t) is the ids that token t could mean in framework name.
+_claimants(name, t) := {id | some [t2, id] in _claims(name); t2 == t} | {c.id | some c in _comps(name); _suffix(c.id) == t}
 
 deny contains f if {
-	some name, fw in _frameworks
-	claims := _claims(fw)
-	some [t, _] in claims
-	ids := {id | some [t2, id] in claims; t2 == t} | {c.id | some c in fw.spec.competencies; _suffix(c.id) == t}
+	some name in object.keys(_frameworks)
+	some [t, _] in _claims(name)
+	ids := _claimants(name, t)
 	count(ids) > 1
+	# a collision already inside an included framework is reported there
+	not _collides_in_include(name, t)
 	f := _at("CompetencyFramework", name, "token-duplicate", "", sprintf("token %q is claimed by %s", [t, concat(", ", sort(ids))]))
+}
+
+_collides_in_include(name, t) if {
+	some inc in _closure(name)
+	inc != name
+	count(_claimants(inc, t)) > 1
 }
 
 # --- alias-duplicate ------------------------------------------------------

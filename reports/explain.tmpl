@@ -6,7 +6,7 @@
 # Explain: {{.person.name}} · {{.competency.id}}
 
 Status: {{.status}}
-Required: {{if .required}}yes{{else}}no{{end}} ({{.person.role}} {{.person.level}})
+Required: {{if .required}}yes{{else}}no{{end}} ({{.person.framework}} {{.person.level}})
 {{$min := .settings.minPerCompetency -}}
 Rule: {{if eq .rule "negativeOverrides" -}}
 negativeOverrides: the most recent mark decides; proven needs at least {{$min}} positive mark{{if ne (toString $min) "1"}}s{{end}}

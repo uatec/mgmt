@@ -167,8 +167,11 @@ func TestRunSpecExample(t *testing.T) {
 	if f.Now != "2026-10-21" || len(f.Evidence) != 3 || len(f.Resources["Person"]) != 3 {
 		t.Errorf("facts not filled: now=%q evidence=%d persons=%d", f.Now, len(f.Evidence), len(f.Resources["Person"]))
 	}
-	if s := f.Sources["Person/priya"]; s.File != "resources/people.yaml" || s.Line != 14 {
+	if s := f.Sources["Person/priya"]; s.File != "resources/people.yaml" || s.Line != 13 {
 		t.Errorf("source = %+v", s)
+	}
+	if fw := f.Frameworks["eng"]; len(fw.Competencies) != 3 || strings.Join(fw.Levels, " ") != "IC2 IC3" {
+		t.Errorf("frameworks = %+v", f.Frameworks)
 	}
 }
 

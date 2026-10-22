@@ -10,7 +10,12 @@ _now := object.get(input, "now", "")
 
 _persons := object.get(input, ["resources", "Person"], {})
 
+# _frameworks holds the raw CompetencyFramework resources (only their
+# includes are read here); competency data comes from input.frameworks, the
+# effective frameworks resolved in Go (Decision N).
 _frameworks := object.get(input, ["resources", "CompetencyFramework"], {})
+
+_effective := object.get(input, "frameworks", {})
 
 _cycles := object.get(input, ["resources", "ReviewCycle"], {})
 
@@ -26,9 +31,15 @@ _default_window := w if {
 # _sorted_by_loc sorts records ascending by [date, file, line].
 _sorted_by_loc(records) := [r | some pair in sort([[[r.date, r.file, r.line], r] | some r in records]); r := pair[1]]
 
-_framework(p) := _frameworks[_persons[p].spec.framework]
+_framework(p) := _effective[_persons[p].spec.framework]
 
 _since(p) := object.get(_persons[p], ["spec", "since"], "")
+
+# _level_since(p) is when the person reached their level (Decision Q).
+_level_since(p) := object.get(_persons[p], ["spec", "levelSince"], _since(p))
+
+# _includes maps each framework to the frameworks it includes directly.
+_includes := {name: object.get(fw, ["spec", "includes"], []) | some name, fw in _frameworks}
 
 # --- cycles ---------------------------------------------------------------
 
@@ -55,7 +66,12 @@ cycle_people[cy] := sort([p |
 
 _selects(c, p, _) if p in object.get(c, ["spec", "selector", "people"], [])
 
-_selects(c, _, person) if person.spec.role in object.get(c, ["spec", "selector", "matchRoles"], [])
+# matchFrameworks selects a person whose framework, or a framework it
+# includes transitively, is listed (Decision R).
+_selects(c, _, person) if {
+	some f in graph.reachable(_includes, {person.spec.framework})
+	f in object.get(c, ["spec", "selector", "matchFrameworks"], [])
+}
 
 cycle[p] := cys[0] if {
 	some p in object.keys(_persons)
@@ -102,7 +118,7 @@ _counted(i) if "minCount" in object.keys(i)
 
 # --- per-person window and settings ---------------------------------------
 
-window[p] := {"from": lib.max_date(from, _since(p)), "to": to, "cycle": cy} if {
+window[p] := {"from": lib.max_date(lib.max_date(from, _since(p)), _level_since(p)), "to": to, "cycle": cy} if {
 	some p in object.keys(_persons)
 	[from, to, cy] := _window_range(p)
 }
@@ -125,43 +141,40 @@ _cycle_evidence(p) := object.get(_cycles[cycle[p]], ["spec", "evidence"], {}) if
 
 # --- competencies and requirements ----------------------------------------
 
-competencies[p] := {c.id: {"id": c.id, "title": c.title, "theme": split(c.id, ".")[0]} |
-	some c in object.get(fw, ["spec", "competencies"], [])
-} if {
+# competencies[p] is the person's effective framework's competencies, by id:
+# {id, title, theme, summary, levels: {level: descriptor}}.
+competencies[p] := object.get(fw, "competencies", {}) if {
 	some p in object.keys(_persons)
 	fw := _framework(p)
 }
 
-# _levels(p) maps level name -> level for the person's role.
-_levels(p) := {l.name: l |
-	some role in object.get(_framework(p), ["spec", "roles"], [])
-	role.name == _persons[p].spec.role
-	some l in object.get(role, "levels", [])
-}
-
-# A competency is required at level L when some level k reachable from L
-# (L included) expects it, and no level j between L and k removes it.
-required[p] := sort([c |
-	some c in {x |
-		some k in reach
-		some x in object.get(levels, [k, "expects"], [])
-		not _removed_between(levels, inherits, reach, k, x)
-	}
-]) if {
+# ladder[p] is the person's framework's ordered levels, lowest first.
+ladder[p] := object.get(fw, "levels", []) if {
 	some p in object.keys(_persons)
-	_framework(p)
-	levels := _levels(p)
-	inherits := {name: [x | x := object.get(l, "inherits", null); x != null] | some name, l in levels}
-	reach := _reach(inherits, _persons[p].spec.level)
+	fw := _framework(p)
 }
 
-_reach(inherits, level) := graph.reachable(inherits, {level}) if inherits[level] else := set()
+level[p] := person.spec.level if some p, person in _persons
 
-_removed_between(levels, inherits, reach, k, c) if {
-	some j in reach
-	j != k
-	k in graph.reachable(inherits, {j})
-	c in object.get(levels, [j, "removes"], [])
+# next_level[p] is the ladder entry after the person's level; undefined at
+# the top or when the level is not on the ladder.
+next_level[p] := l[i + 1] if {
+	some p, l in ladder
+	some i, x in l
+	x == level[p]
+	i + 1 < count(l)
+}
+
+# descriptor[p][c] is competency c's descriptor at the person's level.
+descriptor[p][c] := d if {
+	some p, comps in competencies
+	some c, comp in comps
+	d := comp.levels[level[p]]
+}
+
+# A competency is required when it has a descriptor at the person's level.
+required[p] := sort([c | some c in object.keys(object.get(descriptor, p, {}))]) if {
+	some p in object.keys(competencies)
 }
 
 # --- evidence -------------------------------------------------------------

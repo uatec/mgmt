@@ -87,12 +87,30 @@ type Options struct {
 	Cycle string `json:"cycle"`
 }
 
+// Framework is an effective competency framework: its own competencies plus
+// those of every framework it includes, transitively (Decision N).
+type Framework struct {
+	Levels       []string              `json:"levels"`
+	Competencies map[string]Competency `json:"competencies"` // id -> competency
+}
+
+// Competency is one row of a framework's matrix. Levels maps a ladder level
+// to its descriptor; a level without one means not required there.
+type Competency struct {
+	ID      string            `json:"id"`
+	Title   string            `json:"title"`
+	Theme   string            `json:"theme"`
+	Summary string            `json:"summary"`
+	Levels  map[string]string `json:"levels"`
+}
+
 // Facts is the document handed to the policies.
 type Facts struct {
 	Now         string                    `json:"now"`
 	Options     Options                   `json:"options"`
 	Resources   map[string]map[string]any `json:"resources"` // kind -> metadata.name -> full object
 	Sources     map[string]Source         `json:"sources"`   // "Kind/name" -> document start
+	Frameworks  map[string]Framework      `json:"frameworks"`
 	Evidence    []Evidence                `json:"evidence"`
 	Touches     []Touch                   `json:"touches"`
 	Actions     []Action                  `json:"actions"`
@@ -122,6 +140,9 @@ func (f Facts) MarshalJSON() ([]byte, error) {
 	}
 	if p.Sources == nil {
 		p.Sources = map[string]Source{}
+	}
+	if p.Frameworks == nil {
+		p.Frameworks = map[string]Framework{}
 	}
 	if p.Evidence == nil {
 		p.Evidence = []Evidence{}

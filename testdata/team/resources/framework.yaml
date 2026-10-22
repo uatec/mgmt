@@ -1,26 +1,38 @@
 apiVersion: mgmt/v1alpha1
 kind: CompetencyFramework
 metadata:
+  name: core
+spec:
+  levels: [IC2, IC3]
+  competencies:
+    - id: collab.planning
+      title: Contributes actively to planning and refinement
+      tokens: [planning, plan]
+      levels:
+        IC3: Shapes the plan for their area, sizing work and naming risks up front.
+    - id: collab.feedback
+      title: Gives clear, kind and useful feedback
+      tokens: [feedback]
+      levels:
+        IC2: Gives specific, kind feedback to teammates soon after the moment.
+        IC3: Makes feedback a team habit and asks for it in return.
+---
+apiVersion: mgmt/v1alpha1
+kind: CompetencyFramework
+metadata:
   name: eng
 spec:
+  includes: [core]              # adds core's competencies
+  levels: [IC2, IC3]            # must match core's ladder
   competencies:
     - id: delivery.ownership
       title: Owns outcomes end to end
       tokens: [ownership, own]
-    - id: collab.planning
-      title: Contributes actively to planning and refinement
-      tokens: [planning, plan]
+      levels:
+        IC2: Sees their own tasks through to done and raises blockers early.
+        IC3: Owns a whole piece of work from idea to follow-up without being chased.
     - id: scope.crossteam
       title: Delivers work that spans teams
       tokens: [crossteam, xteam]
-    - id: collab.feedback
-      title: Gives clear, kind and useful feedback
-      tokens: [feedback]
-  roles:
-    - name: platform-engineer
       levels:
-        - name: L2
-          expects: [delivery.ownership, collab.feedback]
-        - name: L3
-          inherits: L2
-          expects: [collab.planning, scope.crossteam]
+        IC3: Delivers changes that need agreement and work from more than one team.

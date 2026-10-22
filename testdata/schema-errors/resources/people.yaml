@@ -5,8 +5,7 @@ metadata:
 spec:
   aliases: [Sam]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 1 May 2026
 ---
 apiVersion: mgmt/v1alpha1
@@ -22,6 +21,5 @@ metadata:
 spec:
   aliases: [Jo]
   framework: eng
-  role: platform-engineer
-  level: L3
+  level: IC3
   since: 2026-09-31

@@ -31,22 +31,24 @@ import "time"
 	}
 }
 
+#Level: =~"^[A-Za-z0-9][A-Za-z0-9-]*$"
+
+// #CompetencyFramework is a competency x level matrix. A competency is
+// required at a level when it has a descriptor there. includes pulls in the
+// competencies of other frameworks (transitively); engine.Validate checks
+// what CUE cannot: unknown includes, include cycles, ladders that differ
+// from an include's, descriptors off the ladder and duplicate ids.
 #CompetencyFramework: #Resource & {
 	kind: "CompetencyFramework"
 	spec: {
+		includes?: [...string]
+		levels: [#Level, ...#Level]
 		competencies: [...{
-			id:     #CompetencyID
-			title:  string
-			tokens?: [...#Token]
-		}]
-		roles: [...{
-			name: string
-			levels: [...{
-				name:      string
-				inherits?: string
-				expects?: [...#CompetencyID]
-				removes?: [...#CompetencyID]
-			}]
+			id:       #CompetencyID
+			title:    string
+			tokens?:  [...#Token]
+			summary?: string
+			levels?: [string]: string
 		}]
 	}
 }
@@ -57,25 +59,24 @@ import "time"
 		displayName?: string
 		aliases?: [...string]
 		framework:        string
-		role:             string
 		level:            string
 		since:            #Date
+		levelSince?:      #Date
 		oneToOneCadence?: #Duration
 	}
 }
 
-// #Selector needs at least one of people and matchRoles.
-// #Selector's "at least one of people and matchRoles" rule cannot be expressed
-// in CUE without leaving the value incomplete, so engine.Validate checks it.
+// #Selector needs at least one of people and matchFrameworks. That rule
+// cannot be expressed in CUE without leaving the value incomplete, so
+// engine.Validate checks it.
 #Selector: {
 	people?: [...string]
-	matchRoles?: [...string]
+	matchFrameworks?: [...string]
 }
 
 #ReviewCycle: #Resource & {
 	kind: "ReviewCycle"
 	spec: {
-		framework: string
 		period: {from: #Date, to: #Date}
 		selector: #Selector
 		evidence: {

@@ -149,7 +149,7 @@ func asMap(v any) map[string]any {
 	return map[string]any{}
 }
 
-func sortedKeys(m map[string]any) []string {
+func sortedKeys[V any](m map[string]V) []string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
 		keys = append(keys, k)

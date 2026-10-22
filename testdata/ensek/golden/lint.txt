@@ -5,21 +5,21 @@
 ## Jo Example (jo)
 
 - **competency-untouched**
-  - required competency collab.feedback never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:26)
-  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:26)
+  - required competency collab.feedback never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:24)
+  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:24)
 - **cycle-input-missing**
   - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
 - **gap-unaddressed**
-  - gap collab.feedback (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap collab.planning (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:26)
-  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:26)
+  - gap collab.feedback (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap collab.planning (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap delivery.ownership (unproven) has no open action addressing it (resources/people.yaml:24)
+  - gap scope.crossteam (unproven) has no open action addressing it (resources/people.yaml:24)
 - **oneonone-overdue**
-  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:26)
+  - no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d) (resources/people.yaml:24)
 
 ## Sam Example (sam)
 

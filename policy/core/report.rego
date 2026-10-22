@@ -36,7 +36,7 @@ prep[p] := {
 _person(p) := {
 	"name": p,
 	"displayName": object.get(_persons[p], ["spec", "displayName"], p),
-	"role": _persons[p].spec.role,
+	"framework": _persons[p].spec.framework,
 	"level": _persons[p].spec.level,
 }
 

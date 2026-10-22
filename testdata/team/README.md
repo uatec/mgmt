@@ -4,9 +4,11 @@ A small team with weekly notes from 2026-W30 to 2026-W43, used for the report
 goldens (`prep`, and later `review`, `status`, `explain`) at `--now 2026-10-21`.
 `mgmt lint` gives 0 errors and only warnings.
 
-Framework `eng`: the spec's three competencies plus `collab.feedback`, which
-L2 expects alongside `delivery.ownership`. L3 inherits L2 and adds
-`collab.planning` and `scope.crossteam`.
+Framework `eng` (ladder IC2, IC3) includes `core`, which holds
+`collab.planning` and `collab.feedback`; `eng` adds `delivery.ownership` and
+`scope.crossteam`. `delivery.ownership` and `collab.feedback` have IC2 and IC3
+descriptors; `collab.planning` and `scope.crossteam` only IC3. So IC2
+requires ownership and feedback, and IC3 requires all four.
 
 Cycles:
 
@@ -22,7 +24,7 @@ Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
 `notes/2026-W43.md` also has a `## Platform sync (Tue 20 Oct)` section dated
 2026-10-20 with `@sam` and `@priya` lines.
 
-## sam (L3, since 2026-01-05, cadence 7d)
+## sam (IC3, since 2026-01-05, cadence 7d)
 
 Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 
@@ -47,7 +49,7 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 - Inputs for ensek-2026-h2: self-assessment (W42:7), peer-feedback 1 of 3
   (W43:11), okrs missing.
 
-## priya (L2, since 2026-01-05, cadence 14d)
+## priya (IC2, since 2026-01-05, cadence 14d)
 
 Everything required is proven: delivery.ownership (+W31:4, +W37:4) and
 collab.feedback (+W33:4, +W39:4). W43:4 (+ownership) is outside the window.
@@ -55,18 +57,18 @@ collab.feedback (+W33:4, +W39:4). W43:4 (+ownership) is outside the window.
 - Open actions: mine W43:5 due 2026-10-23; theirs W41:7 due 2026-11-06
   (addresses delivery.ownership). Closed: W31:5, W41:6.
 - Last 1:1 section before now: W43 (2026-10-19). Since then: W43:12
-  (+crossteam, 2026-10-20; crossteam is not required at L2).
+  (+crossteam, 2026-10-20; crossteam is not required at IC2).
 - Suggested focus: collab.feedback, last touched 2026-09-21.
 - Inputs: okrs (W35:4), self-assessment (W39:5), peer-feedback 3 of 3 (W39:6,
   W41:4, W41:5); nothing missing.
 
-## jo (L3, since 2026-05-01)
+## jo (IC3, since 2026-05-01)
 
 No notes at all: no actions, no previous 1:1, every required competency
 unproven and not addressed, focus on `collab.feedback` (first required id,
 never touched), and every ensek-2026-h2 input missing.
 
-## alex (L2, since 2026-09-01, cadence 14d, in no cycle)
+## alex (IC2, since 2026-09-01, cadence 14d, in no cycle)
 
 No ReviewCycle selects alex, so the rolling window applies (Decision L):
 2026-09-01 (since) to 2026-10-21. `review` is titled `last 90d` and has no

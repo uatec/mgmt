@@ -5,7 +5,7 @@
 {{- with .view -}}
 # Review evidence: {{.person.displayName}} — {{with .cycle}}{{.}}{{else}}last {{$.view.defaultWindow}}{{end}}
 
-{{.person.role}} {{.person.level}}{{with .window}} · window {{.from}} to {{.to}}{{end}}
+{{.person.framework}} {{.person.level}}{{with .window}} · window {{.from}} to {{.to}}{{end}}
 {{range .themes}}
 ## {{.theme}}
 {{range .competencies}}

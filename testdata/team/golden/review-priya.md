@@ -1,6 +1,6 @@
 # Review evidence: Priya Example — ensek-2026-h2
 
-platform-engineer L2 · window 2026-04-01 to 2026-09-30
+eng IC2 · window 2026-04-01 to 2026-09-30
 
 ## collab
 

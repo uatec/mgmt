@@ -5,6 +5,7 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/uatec/mgmt/internal/facts"
 	"github.com/uatec/mgmt/internal/load"
 )
 
@@ -20,12 +21,12 @@ const (
 
 // Index holds the lookups the extractor needs, built from resources.
 type Index struct {
-	persons   map[string]string // lower-case name or alias -> person name
-	names     []string          // lower-case names and aliases, sorted
-	framework map[string]string // person -> framework name
-	role      map[string]string // person -> role
-	tokens    map[string]*tokenMap
-	cycles    []cycle // sorted by name
+	persons   map[string]string          // lower-case name or alias -> person name
+	names     []string                   // lower-case names and aliases, sorted
+	framework map[string]string          // person -> framework name
+	closure   map[string]map[string]bool // framework -> itself and its includes, transitively
+	tokens    map[string]*tokenMap       // framework -> tokens of its effective competencies
+	cycles    []cycle                    // sorted by name
 	me        map[string]bool
 }
 
@@ -38,7 +39,7 @@ type cycle struct {
 	name       string
 	from, to   string // active range, YYYY-MM-DD inclusive
 	people     map[string]bool
-	matchRoles map[string]bool
+	frameworks map[string]bool   // selector.matchFrameworks
 	inputs     map[string]string // lower-case name -> declared name
 }
 
@@ -47,9 +48,21 @@ func NewIndex(resources []load.Resource) *Index {
 	idx := &Index{
 		persons:   map[string]string{},
 		framework: map[string]string{},
-		role:      map[string]string{},
+		closure:   map[string]map[string]bool{},
 		tokens:    map[string]*tokenMap{},
 		me:        map[string]bool{},
+	}
+	specs := frameworkSpecs(resources)
+	for name := range specs {
+		names := IncludeClosure(specs, name)
+		idx.closure[name] = map[string]bool{}
+		var comps []any
+		for _, n := range names {
+			idx.closure[name][n] = true
+			c, _ := specs[n]["competencies"].([]any)
+			comps = append(comps, c...)
+		}
+		idx.tokens[name] = newTokenMap(comps)
 	}
 	for _, r := range resources {
 		spec, _ := r.Object["spec"].(map[string]any)
@@ -64,9 +77,6 @@ func NewIndex(resources []load.Resource) *Index {
 				idx.persons[strings.ToLower(a)] = r.Name
 			}
 			idx.framework[r.Name], _ = spec["framework"].(string)
-			idx.role[r.Name], _ = spec["role"].(string)
-		case "CompetencyFramework":
-			idx.tokens[r.Name] = newTokenMap(spec)
 		case "ReviewCycle":
 			idx.cycles = append(idx.cycles, newCycle(r.Name, spec))
 		}
@@ -79,7 +89,70 @@ func NewIndex(resources []load.Resource) *Index {
 	return idx
 }
 
-func newTokenMap(spec map[string]any) *tokenMap {
+// frameworkSpecs maps each CompetencyFramework name to its spec.
+func frameworkSpecs(resources []load.Resource) map[string]map[string]any {
+	specs := map[string]map[string]any{}
+	for _, r := range resources {
+		if r.Kind == "CompetencyFramework" {
+			specs[r.Name], _ = r.Object["spec"].(map[string]any)
+		}
+	}
+	return specs
+}
+
+// IncludeClosure lists name and then every framework it includes, depth
+// first in declared order, each once; specs maps framework name to spec.
+// Unknown includes are skipped (Validate reports them).
+func IncludeClosure(specs map[string]map[string]any, name string) []string {
+	seen := map[string]bool{}
+	var out []string
+	var visit func(string)
+	visit = func(n string) {
+		if _, ok := specs[n]; !ok || seen[n] {
+			return
+		}
+		seen[n] = true
+		out = append(out, n)
+		for _, inc := range strs(specs[n]["includes"]) {
+			visit(inc)
+		}
+	}
+	visit(name)
+	return out
+}
+
+// Frameworks builds the facts' effective frameworks (Decision N): each
+// framework's ladder with its own competencies and those of everything it
+// includes, transitively.
+func Frameworks(resources []load.Resource) map[string]facts.Framework {
+	specs := frameworkSpecs(resources)
+	out := make(map[string]facts.Framework, len(specs))
+	for name, spec := range specs {
+		fw := facts.Framework{Levels: strs(spec["levels"]), Competencies: map[string]facts.Competency{}}
+		for _, n := range IncludeClosure(specs, name) {
+			comps, _ := specs[n]["competencies"].([]any)
+			for _, c := range comps {
+				cm, _ := c.(map[string]any)
+				id, _ := cm["id"].(string)
+				if _, dup := fw.Competencies[id]; dup || id == "" {
+					continue
+				}
+				fc := facts.Competency{ID: id, Theme: strings.SplitN(id, ".", 2)[0], Levels: map[string]string{}}
+				fc.Title, _ = cm["title"].(string)
+				fc.Summary, _ = cm["summary"].(string)
+				levels, _ := cm["levels"].(map[string]any)
+				for l, d := range levels {
+					fc.Levels[l], _ = d.(string)
+				}
+				fw.Competencies[id] = fc
+			}
+		}
+		out[name] = fw
+	}
+	return out
+}
+
+func newTokenMap(comps []any) *tokenMap {
 	tm := &tokenMap{explicit: map[string]string{}, full: map[string]string{}, suffix: map[string]string{}}
 	add := func(m map[string]string, key, id string) {
 		key = strings.ToLower(key)
@@ -89,7 +162,6 @@ func newTokenMap(spec map[string]any) *tokenMap {
 		}
 		m[key] = id
 	}
-	comps, _ := spec["competencies"].([]any)
 	for _, c := range comps {
 		cm, _ := c.(map[string]any)
 		id, _ := cm["id"].(string)
@@ -108,7 +180,7 @@ func newTokenMap(spec map[string]any) *tokenMap {
 }
 
 func newCycle(name string, spec map[string]any) cycle {
-	c := cycle{name: name, people: map[string]bool{}, matchRoles: map[string]bool{}, inputs: map[string]string{}}
+	c := cycle{name: name, people: map[string]bool{}, frameworks: map[string]bool{}, inputs: map[string]string{}}
 	period, _ := spec["period"].(map[string]any)
 	c.from, _ = period["from"].(string)
 	c.to, _ = period["to"].(string)
@@ -123,8 +195,8 @@ func newCycle(name string, spec map[string]any) cycle {
 	for _, p := range strs(sel["people"]) {
 		c.people[p] = true
 	}
-	for _, r := range strs(sel["matchRoles"]) {
-		c.matchRoles[r] = true
+	for _, f := range strs(sel["matchFrameworks"]) {
+		c.frameworks[f] = true
 	}
 	ins, _ := spec["inputs"].([]any)
 	for _, in := range ins {
@@ -245,8 +317,18 @@ func (idx *Index) Cycle(person, input, date string) (cycle, name string, ok bool
 	return "", "", false
 }
 
+// selects reports whether the cycle names the person, or lists their
+// framework or a framework it includes (Decision R).
 func (c cycle) selects(idx *Index, person string) bool {
-	return c.people[person] || c.matchRoles[idx.role[person]]
+	if c.people[person] {
+		return true
+	}
+	for f := range idx.closure[idx.framework[person]] {
+		if c.frameworks[f] {
+			return true
+		}
+	}
+	return false
 }
 
 // InputNames lists the inputs of every cycle that selects the person, sorted.

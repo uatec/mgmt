@@ -18,6 +18,7 @@ import (
 	cerrors "cuelang.org/go/cue/errors"
 	"cuelang.org/go/cue/load"
 
+	"github.com/uatec/mgmt/internal/extract"
 	"github.com/uatec/mgmt/internal/facts"
 	mload "github.com/uatec/mgmt/internal/load"
 )
@@ -178,7 +179,12 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 	var finds []facts.Finding
 	seenWS := 0
 	seenName := map[string]bool{}
+	var fws []mload.Resource // valid frameworks, checked together for includes
+	allFWs := map[string]bool{}
 	for _, r := range resources {
+		if r.Kind == "CompetencyFramework" {
+			allFWs[r.Name] = true
+		}
 		if r.Kind == "Workspace" {
 			seenWS++
 			if seenWS > 1 {
@@ -213,11 +219,16 @@ func Validate(resources []mload.Resource, core fs.FS, wsSchemaDir string) []fact
 		}
 		seenName[key] = true
 		if r.Kind == "CompetencyFramework" {
-			for _, msg := range frameworkDuplicates(r.Object) {
+			msgs := frameworkDuplicates(r.Object)
+			for _, msg := range msgs {
 				finds = append(finds, invalid(r.File, r.Line, msg))
+			}
+			if len(msgs) == 0 {
+				fws = append(fws, r)
 			}
 		}
 	}
+	finds = append(finds, frameworkIncludes(fws, allFWs)...)
 	if seenWS == 0 {
 		finds = append(finds, invalid("resources", 1, "no Workspace resource found; exactly one is required"))
 	}
@@ -248,7 +259,7 @@ func intify(v any) any {
 	return v
 }
 
-// selectorProblem enforces that ReviewCycle.spec.selector names people or roles.
+// selectorProblem enforces that ReviewCycle.spec.selector names people or frameworks.
 func selectorProblem(obj map[string]any) string {
 	spec, _ := obj["spec"].(map[string]any)
 	sel, ok := spec["selector"].(map[string]any)
@@ -256,28 +267,140 @@ func selectorProblem(obj map[string]any) string {
 		return "" // CUE reports the missing or mistyped selector
 	}
 	_, p := sel["people"]
-	_, m := sel["matchRoles"]
+	_, m := sel["matchFrameworks"]
 	if !p && !m {
-		return "spec.selector: needs at least one of people and matchRoles"
+		return "spec.selector: needs at least one of people and matchFrameworks"
 	}
 	return ""
 }
 
-// frameworkDuplicates enforces unique competency ids and role names per
-// framework and unique level names per role, which CUE lists cannot express.
-// Call it only on a CUE-valid framework.
+// frameworkDuplicates enforces unique competency ids and ladder levels per
+// framework and descriptors keyed by ladder levels, which CUE lists cannot
+// express. Call it only on a CUE-valid framework.
 func frameworkDuplicates(obj map[string]any) []string {
 	spec, _ := obj["spec"].(map[string]any)
-	var msgs []string
-	msgs = append(msgs, uniqueNames(spec["competencies"], "id", "spec.competencies: duplicate competency id %q")...)
-	msgs = append(msgs, uniqueNames(spec["roles"], "name", "spec.roles: duplicate role name %q")...)
-	roles, _ := spec["roles"].([]any)
-	for _, r := range roles {
-		role, _ := r.(map[string]any)
-		name, _ := role["name"].(string)
-		msgs = append(msgs, uniqueNames(role["levels"], "name", fmt.Sprintf("spec.roles: role %q: duplicate level name %%q", name))...)
+	msgs := uniqueNames(spec["competencies"], "id", "spec.competencies: duplicate competency id %q")
+	onLadder := map[string]bool{}
+	for _, l := range strList(spec["levels"]) {
+		if onLadder[l] {
+			msgs = append(msgs, fmt.Sprintf("spec.levels: duplicate level %q", l))
+		}
+		onLadder[l] = true
+	}
+	comps, _ := spec["competencies"].([]any)
+	for _, c := range comps {
+		cm, _ := c.(map[string]any)
+		id, _ := cm["id"].(string)
+		levels, _ := cm["levels"].(map[string]any)
+		for _, l := range sortedKeys(levels) {
+			if !onLadder[l] {
+				msgs = append(msgs, fmt.Sprintf("spec.competencies: competency %q: descriptor for level %q, which is not on the ladder", id, l))
+			}
+		}
 	}
 	return msgs
+}
+
+// frameworkIncludes checks includes across the valid frameworks fws (in
+// resource order): every include names a framework in all, includes do not
+// loop, an included framework has the same ladder, and no competency id is
+// defined twice in a framework's include closure. A duplicate already
+// present in a direct include's closure is reported there only.
+func frameworkIncludes(fws []mload.Resource, all map[string]bool) []facts.Finding {
+	type fw struct {
+		includes, levels, ids []string
+	}
+	specs := map[string]map[string]any{}
+	byName := map[string]fw{}
+	for _, r := range fws {
+		spec, _ := r.Object["spec"].(map[string]any)
+		specs[r.Name] = spec
+		f := fw{includes: strList(spec["includes"]), levels: strList(spec["levels"])}
+		comps, _ := spec["competencies"].([]any)
+		for _, c := range comps {
+			cm, _ := c.(map[string]any)
+			id, _ := cm["id"].(string)
+			f.ids = append(f.ids, id)
+		}
+		byName[r.Name] = f
+	}
+	// dups lists the ids defined by more than one framework in name's closure.
+	dups := func(name string) map[string][]string {
+		owners := map[string][]string{}
+		for _, n := range extract.IncludeClosure(specs, name) {
+			for _, id := range byName[n].ids {
+				owners[id] = append(owners[id], n)
+			}
+		}
+		out := map[string][]string{}
+		for id, ns := range owners {
+			if len(ns) > 1 {
+				sort.Strings(ns)
+				out[id] = ns
+			}
+		}
+		return out
+	}
+	var finds []facts.Finding
+	for _, r := range fws {
+		f := byName[r.Name]
+		for _, inc := range f.includes {
+			if !all[inc] {
+				finds = append(finds, invalid(r.File, r.Line, fmt.Sprintf("spec.includes: unknown framework %q", inc)))
+			}
+		}
+		if path := includePath(r.Name, r.Name, func(n string) []string { return byName[n].includes }, map[string]bool{}); path != nil {
+			finds = append(finds, invalid(r.File, r.Line, "spec.includes: include cycle "+strings.Join(append([]string{r.Name}, path...), " -> ")))
+		}
+		for _, inc := range f.includes {
+			if g, ok := byName[inc]; ok && strings.Join(g.levels, "\x00") != strings.Join(f.levels, "\x00") {
+				finds = append(finds, invalid(r.File, r.Line, fmt.Sprintf("spec.levels: ladder [%s] differs from included framework %q [%s]",
+					strings.Join(f.levels, ", "), inc, strings.Join(g.levels, ", "))))
+			}
+		}
+		inherited := map[string]bool{}
+		for _, inc := range f.includes {
+			for id := range dups(inc) {
+				inherited[id] = true
+			}
+		}
+		d := dups(r.Name)
+		for _, id := range sortedKeys(d) {
+			if !inherited[id] {
+				finds = append(finds, invalid(r.File, r.Line, fmt.Sprintf("spec.competencies: duplicate competency id %q across included frameworks: %s", id, strings.Join(d[id], ", "))))
+			}
+		}
+	}
+	return finds
+}
+
+// includePath returns a path of includes from "from" to target (ending at
+// target), following includes in declared order, or nil if there is none.
+func includePath(from, target string, includes func(string) []string, seen map[string]bool) []string {
+	for _, n := range includes(from) {
+		if n == target {
+			return []string{n}
+		}
+		if seen[n] {
+			continue
+		}
+		seen[n] = true
+		if p := includePath(n, target, includes, seen); p != nil {
+			return append([]string{n}, p...)
+		}
+	}
+	return nil
+}
+
+func strList(v any) []string {
+	list, _ := v.([]any)
+	out := make([]string, 0, len(list))
+	for _, e := range list {
+		if s, ok := e.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 // uniqueNames reports each repeated item[key] in a list once per repeat, using format.

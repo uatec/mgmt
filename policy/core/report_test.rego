@@ -9,18 +9,23 @@ framework := {
 	"kind": "CompetencyFramework",
 	"metadata": {"name": "eng"},
 	"spec": {
+		"levels": ["IC2", "IC3"],
 		"competencies": [
-			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"]},
-			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"]},
-			{"id": "scope.crossteam", "title": "Spans", "tokens": ["crossteam"]},
+			{"id": "delivery.ownership", "title": "Owns", "tokens": ["ownership"], "levels": {"IC2": "o2", "IC3": "o3"}},
+			{"id": "collab.planning", "title": "Plans", "tokens": ["planning"], "levels": {"IC3": "p3"}},
+			{"id": "scope.crossteam", "title": "Spans", "tokens": ["crossteam"], "levels": {"IC3": "s3"}},
 		],
-		"roles": [{
-			"name": "platform-engineer",
-			"levels": [
-				{"name": "L2", "expects": ["delivery.ownership"]},
-				{"name": "L3", "inherits": "L2", "expects": ["collab.planning", "scope.crossteam"]},
-			],
-		}],
+	},
+}
+
+# effective is framework as facts.frameworks carries it (Decision N).
+effective := {
+	"levels": framework.spec.levels,
+	"competencies": {c.id: {
+		"id": c.id, "title": c.title, "theme": split(c.id, ".")[0],
+		"summary": "", "levels": c.levels,
+	} |
+		some c in framework.spec.competencies
 	},
 }
 
@@ -28,7 +33,7 @@ sam := {
 	"apiVersion": "mgmt/v1alpha1",
 	"kind": "Person",
 	"metadata": {"name": "sam"},
-	"spec": {"displayName": "Sam Example", "framework": "eng", "role": "platform-engineer", "level": "L3", "since": "2026-05-01"},
+	"spec": {"displayName": "Sam Example", "framework": "eng", "level": "IC3", "since": "2026-05-01"},
 }
 
 workspace := {"kind": "Workspace", "metadata": {"name": "ws"}, "spec": {"notes": "notes/*.md", "me": ["me"], "defaultWindow": "90d"}}
@@ -38,7 +43,6 @@ h2 := {
 	"kind": "ReviewCycle",
 	"metadata": {"name": "ensek-2026-h2"},
 	"spec": {
-		"framework": "eng",
 		"period": {"from": "2026-04-01", "to": "2026-09-30"},
 		"selector": {"people": ["sam"]},
 		"inputs": [
@@ -54,6 +58,7 @@ doc(people, cycles) := {
 	"now": "2026-10-21",
 	"options": {"cycle": ""},
 	"resources": {"Workspace": {"ws": workspace}, "CompetencyFramework": {"eng": framework}, "Person": people, "ReviewCycle": cycles},
+	"frameworks": {"eng": effective},
 	"sources": {},
 	"evidence": [],
 	"touches": [],
@@ -77,7 +82,7 @@ locs(items) := [sprintf("%s:%d", [i.file, i.line]) | some i in items]
 
 test_person_and_empty_lists if {
 	p := report.prep.sam with input as base
-	p.person == {"name": "sam", "displayName": "Sam Example", "role": "platform-engineer", "level": "L3"}
+	p.person == {"name": "sam", "displayName": "Sam Example", "framework": "eng", "level": "IC3"}
 	p.window == {"from": "2026-05-01", "to": "2026-09-30", "cycle": "ensek-2026-h2"}
 	p.actions == {"mine": [], "theirs": []}
 	p.lastSection == null
@@ -320,7 +325,7 @@ explain_marks := [
 
 test_explain_negative_overrides_latest_decides if {
 	e := report.explain.sam["collab.planning"] with input as with_records("evidence", explain_marks)
-	e.person.level == "L3"
+	e.person.level == "IC3"
 	e.competency == {"id": "collab.planning", "title": "Plans"}
 	e.required == true
 	e.status == "disproven"
@@ -346,7 +351,7 @@ test_explain_counting_no_single_item_decides if {
 }
 
 test_explain_not_required_and_empty if {
-	no_scope := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	no_scope := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
 	e := report.explain.sam["scope.crossteam"] with input as no_scope
 	e.required == false
 	e.status == "unproven"
@@ -358,7 +363,7 @@ test_explain_not_required_and_empty if {
 
 priya := json.patch(sam, [
 	{"op": "replace", "path": "/metadata/name", "value": "priya"},
-	{"op": "replace", "path": "/spec/level", "value": "L2"},
+	{"op": "replace", "path": "/spec/level", "value": "IC2"},
 ])
 
 two_people := json.patch(doc({"sam": sam, "priya": priya}, {"ensek-2026-h2": h2}), [
@@ -396,7 +401,7 @@ test_status_evidence_gaps_remain_plural if {
 }
 
 test_status_evidence_gaps_remain_singular if {
-	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
 	s := report.status with input as one
 	c := cond(s, "EvidenceComplete")
 	c.message == "1 gap across 1 person"
@@ -404,7 +409,7 @@ test_status_evidence_gaps_remain_singular if {
 
 test_status_evidence_no_gaps if {
 	marks := [object.union(mark(1, "2026-09-01", "notes/a.md", 1), {"competency": "delivery.ownership"})]
-	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
 	s := report.status with input as l2
 	c := cond(s, "EvidenceComplete")
 	c == {"type": "EvidenceComplete", "status": "True", "reason": "NoGaps", "message": "no gaps for 1 person"}
@@ -528,14 +533,14 @@ test_status_gaps_detail if {
 }
 
 test_status_gaps_singular if {
-	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	one := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
 	s := report.status with input as one
 	s.cycles[0].gaps.summary == "1 gap"
 }
 
 test_status_gaps_clear if {
 	marks := [object.union(mark(1, "2026-09-01", "notes/a.md", 1), {"competency": "delivery.ownership"})]
-	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "L2"}])
+	l2 := json.patch(with_records("evidence", marks), [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}])
 	s := report.status with input as l2
 	s.cycles[0].gaps == {"ok": true, "summary": "no gaps", "people": []}
 }
