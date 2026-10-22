@@ -6,7 +6,7 @@ eng IC2 · window 2026-04-01 to 2026-09-30
 
 ### collab.feedback · Gives clear, kind and useful feedback
 Bar (IC2): Gives specific, kind feedback to teammates soon after the moment.
-Status: proven
+Status: proven (score 2)
 
 Positive:
 - 2026-09-21 · gave a new joiner thoughtful notes on their first design doc (notes/2026-W39.md:4)
@@ -22,7 +22,7 @@ Actions:
 
 ### delivery.ownership · Owns outcomes end to end
 Bar (IC2): Sees their own tasks through to done and raises blockers early.
-Status: proven
+Status: proven (score 3)
 
 Positive:
 - 2026-09-07 ++ · led the DNS move and closed it out (notes/2026-W37.md:4)

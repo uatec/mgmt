@@ -6,7 +6,7 @@ eng IC3 · window 2026-04-01 to 2026-09-30
 
 ### collab.feedback · Gives clear, kind and useful feedback
 Bar (IC3): Makes feedback a team habit and asks for it in return.
-Status: proven
+Status: proven (score 2)
 
 Positive:
 - 2026-09-28 · coached a new joiner through code review (notes/2026-W40.md:4)
@@ -20,7 +20,7 @@ Actions:
 
 ### collab.planning · Contributes actively to planning and refinement
 Bar (IC3): Shapes the plan for their area, sizing work and naming risks up front.
-Status: disproven
+Status: disproven (score -2)
 
 Positive:
 - 2026-08-17 · ran the refinement session well (notes/2026-W34.md:4)
@@ -36,7 +36,7 @@ Actions:
 
 ### delivery.ownership · Owns outcomes end to end
 Bar (IC3): Owns a whole piece of work from idea to follow-up without being chased.
-Status: proven
+Status: proven (score 2)
 
 Positive:
 - 2026-08-31 · drove the cache incident through to the fix (notes/2026-W36.md:5)
@@ -52,7 +52,7 @@ Actions:
 
 ### scope.crossteam · Delivers work that spans teams
 Bar (IC3): Delivers changes that need agreement and work from more than one team.
-Status: unproven
+Status: unproven (score 0)
 
 Positive:
 - none

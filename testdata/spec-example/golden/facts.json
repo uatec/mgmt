@@ -227,7 +227,7 @@
         "spec": {
           "evidence": {
             "minPerCompetency": 1,
-            "negativeOverrides": true
+            "scoring": "weighted"
           },
           "inputs": [
             {
