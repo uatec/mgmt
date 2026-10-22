@@ -68,6 +68,10 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"explain", "priya", "crossteam"}, 0, "explain-priya-crossteam.md", ""},
 		{"team", []string{"explain", "sam", "plannig"}, 2, "", "explain-plannig.stderr"},
 		{"team", []string{"explain", "sam", "zzzzzz"}, 2, "", "explain-zzzzzz.stderr"},
+		{"team", []string{"promo", "priya"}, 0, "promo-priya.md", ""},
+		{"team", []string{"promo", "sam"}, 0, "promo-sam.md", ""},
+		{"team", []string{"promo", "nobody"}, 2, "", "promo-nobody.stderr"},
+		{"errors", []string{"promo", "sam"}, 2, "", "promo-refused.stderr"},
 		{"team", []string{"status"}, 0, "status.md", ""},
 		{"team", []string{"status", "--cycle", "retro-2026-h1"}, 0, "status-retro.md", ""},
 		{"team", []string{"status", "--cycle", "nope"}, 2, "", "status-nope.stderr"},
@@ -340,6 +344,30 @@ func TestReviewNeverRates(t *testing.T) {
 	}
 }
 
+// TestPromoNeverRates: the packet collects evidence and never judges
+// readiness or states a rating.
+func TestPromoNeverRates(t *testing.T) {
+	files, err := filepath.Glob(filepath.Join("..", "..", "testdata", "*", "golden", "promo-*.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) < 2 {
+		t.Fatalf("found %d promo goldens, want at least 2", len(files))
+	}
+	rating := regexp.MustCompile(`(?i)\bready\b|rating|\bmeets\b|exceeds`)
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, line := range strings.Split(string(b), "\n") {
+			if rating.MatchString(line) {
+				t.Errorf("%s:%d states a judgement: %q", f, i+1, line)
+			}
+		}
+	}
+}
+
 // TestReportDataMissingView: a person argument whose view is undefined is an
 // error, not an empty report.
 func TestReportDataMissingView(t *testing.T) {
@@ -548,6 +576,7 @@ func TestReportUsage(t *testing.T) {
 		{[]string{"report", "explain", "sam"}, "mgmt: explain is a built-in report; run \"mgmt explain <person> <competency>\"\n"},
 		{[]string{"report", "prep"}, "mgmt: prep is a built-in report; run \"mgmt prep <person>\"\n"},
 		{[]string{"report", "review", "sam"}, "mgmt: review is a built-in report; run \"mgmt review <person>\"\n"},
+		{[]string{"report", "promo", "sam"}, "mgmt: promo is a built-in report; run \"mgmt promo <person>\"\n"},
 	} {
 		var stdout, stderr bytes.Buffer
 		if code := Run(append([]string{"--now", "2026-10-21"}, tc.args...), root, &stdout, &stderr); code != 2 {

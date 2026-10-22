@@ -706,3 +706,75 @@ test_status_detail_missing_framework_is_total if {
 	s := report.status with input as broken
 	[p.person | some p in s.cycles[0].gaps.people] == ["sam"]
 }
+
+# --- promo (Decision U) ---------------------------------------------------
+
+# at_ic2 makes sam an IC2 whose next level is IC3.
+at_ic2(extra) := json.patch(base, array.concat([{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC2"}], extra))
+
+pmark(comp, pol, strength, date, file, line) := {
+	"person": "sam", "competency": comp, "polarity": pol, "strength": strength,
+	"date": date, "file": file, "line": line, "text": "t",
+}
+
+test_promo_next_level_evidence_and_gaps if {
+	facts := at_ic2([{"op": "replace", "path": "/evidence", "value": [
+		pmark("delivery.ownership", 1, 2, "2026-07-01", "notes/a.md", 1),
+		pmark("delivery.ownership", 1, 2, "2026-09-01", "notes/b.md", 2),
+		pmark("delivery.ownership", 1, 1, "2026-09-02", "notes/c.md", 3), # + is not promotion evidence
+		pmark("delivery.ownership", -1, 2, "2026-09-03", "notes/d.md", 4), # -- is not either
+		pmark("scope.crossteam", 1, 2, "2026-10-20", "notes/e.md", 5), # not required at IC2, required at IC3
+		pmark("scope.crossteam", 1, 2, "2026-10-22", "notes/f.md", 6), # after now
+	]}])
+	p := report.promo.sam with input as facts
+	p.person.level == "IC2"
+	p.nextLevel == "IC3"
+	p.levelSince == "2026-05-01"
+	[c.id | some c in p.competencies] == ["delivery.ownership", "scope.crossteam"]
+	own := p.competencies[0]
+	own.current == "o2"
+	own.next == "o3"
+	own.title == "Owns"
+	locs(own.evidence) == ["notes/b.md:2", "notes/a.md:1"]
+	own.evidence[0] == {"date": "2026-09-01", "text": "t", "file": "notes/b.md", "line": 2}
+	p.competencies[1].current == null
+	locs(p.competencies[1].evidence) == ["notes/e.md:5"]
+	p.gaps == [{"id": "collab.planning", "title": "Plans", "next": "p3"}]
+}
+
+# Review Focus 2: ++ before levelSince was judged against the old next level.
+test_promo_excludes_evidence_before_level_since if {
+	facts := at_ic2([
+		{"op": "add", "path": "/resources/Person/sam/spec/levelSince", "value": "2026-07-01"},
+		{"op": "replace", "path": "/evidence", "value": [
+			pmark("delivery.ownership", 1, 2, "2026-06-30", "notes/a.md", 1),
+			pmark("delivery.ownership", 1, 2, "2026-07-01", "notes/b.md", 2),
+		]},
+	])
+	p := report.promo.sam with input as facts
+	p.levelSince == "2026-07-01"
+	locs(p.competencies[0].evidence) == ["notes/b.md:2"]
+}
+
+# Evidence before the cycle window still counts: the packet spans cycles.
+test_promo_ignores_cycle_window if {
+	facts := at_ic2([{"op": "replace", "path": "/evidence", "value": [pmark("delivery.ownership", 1, 2, "2026-05-02", "notes/a.md", 1)]}])
+	p := report.promo.sam with input as json.patch(facts, [{"op": "replace", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/period/from", "value": "2026-08-01"}])
+	locs(p.competencies[0].evidence) == ["notes/a.md:1"]
+}
+
+test_promo_top_of_ladder_has_no_next_level if {
+	p := report.promo.sam with input as base
+	p.nextLevel == null
+	p.competencies == []
+	p.gaps == []
+	p.person.level == "IC3"
+}
+
+test_promo_missing_framework_is_total if {
+	broken := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/framework", "value": "nope"}])
+	p := report.promo.sam with input as broken
+	p.nextLevel == null
+	p.competencies == []
+	p.gaps == []
+}

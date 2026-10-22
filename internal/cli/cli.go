@@ -31,6 +31,7 @@ commands:
                                        print errors and warnings
   prep <person> [--cycle NAME]         print the 1:1 prep sheet
   review <person> [--cycle NAME]       print the review evidence pack
+  promo <person> [--cycle NAME]        print a draft promotion packet (++ evidence for the next level)
   explain <person> <competency> [--cycle NAME]
                                        explain why a competency has its status
   status [--cycle NAME] [--format markdown|yaml]
@@ -74,6 +75,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runReport("prep", rest[1:], "<person>", root, *now, &buf, stderr)
 	case "review":
 		code = runReport("review", rest[1:], "<person>", root, *now, &buf, stderr)
+	case "promo":
+		code = runReport("promo", rest[1:], "<person>", root, *now, &buf, stderr)
 	case "explain":
 		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
 	case "status":
@@ -243,6 +246,7 @@ func runStatus(args []string, root, now string, stdout, stderr io.Writer) int {
 var builtinReports = map[string]string{
 	"prep":        "prep <person>",
 	"review":      "review <person>",
+	"promo":       "promo <person>",
 	"explain":     "explain <person> <competency>",
 	"status":      "status",
 	"status-yaml": "status --format yaml",

@@ -1,0 +1,26 @@
+{{- /* Draft promotion packet. view = data.mgmt.report.promo[person]. */ -}}
+{{- with .view -}}
+# Draft promotion packet: {{.person.displayName}} — {{.person.level}}{{with .nextLevel}} → {{.}}{{end}}
+
+This is a draft of collected evidence, not a recommendation.
+
+{{.person.framework}} · {{.person.level}} since {{.levelSince}}
+{{if not .nextLevel}}
+{{.person.level}} is the top of the {{.person.framework}} ladder: there is no next level.
+{{else}}
+## Evidence for {{.nextLevel}}
+{{range .competencies}}
+### {{.id}} · {{.title}}
+{{$.view.person.level}} bar: {{with .current}}{{.}}{{else}}not required at {{$.view.person.level}}{{end}}
+{{$.view.nextLevel}} bar: {{.next}}
+
+++ evidence since {{$.view.levelSince}}:
+{{range .evidence}}- {{.date}} · {{.text}} ({{.file}}:{{.line}})
+{{end}}{{else}}
+No ++ evidence yet for any {{$.view.nextLevel}} competency.
+{{end}}
+## No ++ evidence yet
+{{range .gaps}}- {{.id}} · {{.title}}: {{.next}}
+{{else}}- none
+{{end}}{{end -}}
+{{- end -}}

@@ -220,6 +220,54 @@ _decides(d, m) := true if {
 	d.line == m.line
 } else := false
 
+# --- promo ----------------------------------------------------------------
+
+# The draft promotion packet (Decision U): for each competency with a
+# descriptor at the next level, the current and next bars and the person's
+# ++ marks since they reached their level (Review Focus 2: not bounded by the
+# review window, so it spans cycles), newest first. Competencies with no ++
+# yet are the gaps. At the top of the ladder (or off it) nextLevel is null
+# and both lists are empty. The packet never rates or judges readiness.
+promo[p] := {
+	"person": _person(p),
+	"nextLevel": object.get(derive.next_level, p, null),
+	"levelSince": derive.level_since[p],
+	"competencies": [_promo_item(p, c, ev) |
+		some c in _next_level_competencies(p)
+		ev := _promo_evidence(p, c)
+		count(ev) > 0
+	],
+	"gaps": [{"id": c, "title": _title(p, c), "next": _next_descriptor(p, c)} |
+		some c in _next_level_competencies(p)
+		count(_promo_evidence(p, c)) == 0
+	],
+} if some p in object.keys(_persons)
+
+_next_descriptor(p, c) := derive.competencies[p][c].levels[derive.next_level[p]]
+
+# Ids of the competencies with a descriptor at the next level, sorted.
+_next_level_competencies(p) := sort([c |
+	some c, comp in object.get(derive.competencies, p, {})
+	comp.levels[object.get(derive.next_level, p, "")]
+])
+
+_promo_evidence(p, c) := _newest_first([{"date": e.date, "text": e.text, "file": e.file, "line": e.line} |
+	some e in derive.evidence_by[p]
+	e.competency == c
+	e.polarity > 0
+	_strong(e)
+	e.date >= derive.level_since[p]
+	e.date <= _now
+])
+
+_promo_item(p, c, ev) := {
+	"id": c,
+	"title": _title(p, c),
+	"current": object.get(derive.descriptor, [p, c], null),
+	"next": _next_descriptor(p, c),
+	"evidence": ev,
+}
+
 # --- status ---------------------------------------------------------------
 
 # The team matrix (every Person, by name; "" where a competency is not

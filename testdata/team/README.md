@@ -31,6 +31,12 @@ never fires. `review` tags strong evidence `++`/`--`; prep's "To raise" lists
 the strong marks since the last 1:1, newest first. `review` and `explain`
 print each competency's descriptor at the person's level as `Bar (<level>)`.
 
+Promotion packets (`promo`): sam is the top-of-ladder person (IC3 on the
+IC2/IC3 ladder), so `promo sam` says there is no next level. `promo priya`
+is the full packet: ++ownership (W37:4) and ++crossteam (W43:12) are the
+evidence for IC3, and collab.feedback and collab.planning are the gaps. No
+promo golden states readiness or a rating (`TestPromoNeverRates`).
+
 ## sam (IC3, since 2026-01-05, cadence 7d)
 
 Window 2026-04-01..2026-09-30 (ensek-2026-h2).
