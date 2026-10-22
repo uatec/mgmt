@@ -232,16 +232,25 @@ promo[p] := {
 	"person": _person(p),
 	"nextLevel": object.get(derive.next_level, p, null),
 	"levelSince": derive.level_since[p],
-	"competencies": [_promo_item(p, c, ev) |
-		some c in _next_level_competencies(p)
-		ev := _promo_evidence(p, c)
-		count(ev) > 0
+	"onLadder": _on_ladder(p),
+	"themes": [{"theme": t, "competencies": [i | some i in items; i.theme == t]} |
+		items := _promo_items(p)
+		some t in sort({i.theme | some i in items})
 	],
+	"competencies": _promo_items(p),
 	"gaps": [{"id": c, "title": _title(p, c), "next": _next_descriptor(p, c)} |
 		some c in _next_level_competencies(p)
 		count(_promo_evidence(p, c)) == 0
 	],
 } if some p in object.keys(_persons)
+
+_on_ladder(p) := true if derive.level[p] in object.get(derive.ladder, p, []) else := false
+
+_promo_items(p) := [_promo_item(p, c, ev) |
+	some c in _next_level_competencies(p)
+	ev := _promo_evidence(p, c)
+	count(ev) > 0
+]
 
 _next_descriptor(p, c) := derive.competencies[p][c].levels[derive.next_level[p]]
 
@@ -262,6 +271,7 @@ _promo_evidence(p, c) := _newest_first([{"date": e.date, "text": e.text, "file":
 
 _promo_item(p, c, ev) := {
 	"id": c,
+	"theme": _theme(p, c),
 	"title": _title(p, c),
 	"current": object.get(derive.descriptor, [p, c], null),
 	"next": _next_descriptor(p, c),

@@ -5,21 +5,25 @@
 This is a draft of collected evidence, not a recommendation.
 
 {{.person.framework}} · {{.person.level}} since {{.levelSince}}
-{{if not .nextLevel}}
-{{.person.level}} is the top of the {{.person.framework}} ladder: there is no next level.
+{{if not .onLadder}}
+Level {{.person.level}} is not on the {{.person.framework}} ladder; no packet.
+{{else if not .nextLevel}}
+No next level above {{.person.level}}.
 {{else}}
 ## Evidence for {{.nextLevel}}
+{{range .themes}}
+### {{.theme}}
 {{range .competencies}}
-### {{.id}} · {{.title}}
+#### {{.id}} · {{.title}}
 {{$.view.person.level}} bar: {{with .current}}{{.}}{{else}}not required at {{$.view.person.level}}{{end}}
 {{$.view.nextLevel}} bar: {{.next}}
 
 ++ evidence since {{$.view.levelSince}}:
 {{range .evidence}}- {{.date}} · {{.text}} ({{.file}}:{{.line}})
-{{end}}{{else}}
+{{end}}{{end}}{{else}}
 No ++ evidence yet for any {{$.view.nextLevel}} competency.
 {{end}}
-## No ++ evidence yet
+## No next-level evidence yet
 {{range .gaps}}- {{.id}} · {{.title}}: {{.next}}
 {{else}}- none
 {{end}}{{end -}}

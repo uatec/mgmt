@@ -766,15 +766,34 @@ test_promo_ignores_cycle_window if {
 test_promo_top_of_ladder_has_no_next_level if {
 	p := report.promo.sam with input as base
 	p.nextLevel == null
+	p.onLadder == true
 	p.competencies == []
 	p.gaps == []
 	p.person.level == "IC3"
+}
+
+test_promo_groups_by_theme if {
+	facts := at_ic2([{"op": "replace", "path": "/evidence", "value": [
+		pmark("scope.crossteam", 1, 2, "2026-10-20", "notes/e.md", 5),
+		pmark("delivery.ownership", 1, 2, "2026-09-01", "notes/b.md", 2),
+	]}])
+	p := report.promo.sam with input as facts
+	[t.theme | some t in p.themes] == ["delivery", "scope"]
+	[c.id | some c in p.themes[1].competencies] == ["scope.crossteam"]
+}
+
+test_promo_level_off_ladder if {
+	off := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/level", "value": "IC9"}])
+	p := report.promo.sam with input as off
+	p.onLadder == false
+	p.nextLevel == null
 }
 
 test_promo_missing_framework_is_total if {
 	broken := json.patch(base, [{"op": "replace", "path": "/resources/Person/sam/spec/framework", "value": "nope"}])
 	p := report.promo.sam with input as broken
 	p.nextLevel == null
+	p.onLadder == false
 	p.competencies == []
 	p.gaps == []
 }
