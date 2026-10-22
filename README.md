@@ -231,13 +231,17 @@ Person and date are inherited from context, so a mark is a single token.
   under it. `@person` on a line attributes that line to someone else.
 - `+x` is positive evidence, `-x` negative evidence and `~x` a neutral "discussed"
   touch, where `x` is a competency id or token.
+- `++x` and `--x` are strong evidence: praise worth raising and a serious
+  concern. A `++` also says the person is ready for more; a `--` counts as a
+  negative mark and needs addressing like any other. Each still counts as one
+  mark in status. They are not allowed on action lines.
 - `- [ ]` is an open action and `- [x]` a closed one. On an action, `@date` sets
   the due date, `@person` the owner (default: you) and `~x` the competency it
   addresses. `@date` accepts `2026-10-28`, `28oct`, `28 Oct` and weekday names
   (`@fri`).
 - `!name` records a ReviewCycle input as received.
 - A token must start a word (after a space, `(` or the line start), so
-  `+1`, `-5` and hyphenated words are never tokens, and nothing inside code
+  `+1`, `-5`, `C++`, `a--b` and hyphenated words are never tokens, and nothing inside code
   spans, code blocks or links counts.
 
 ## Errors and warnings
@@ -251,7 +255,9 @@ Errors: `schema-invalid`, `ref-unknown`, `token-duplicate`, `alias-duplicate`,
 
 Warnings: `section-unmarked`, `negative-unaddressed`, `gap-unaddressed`,
 `competency-untouched`, `action-overdue`, `action-no-due`, `action-duplicate`,
-`oneonone-overdue`, `cycle-input-missing`, `cycle-evidence-thin`.
+`oneonone-overdue`, `cycle-input-missing`, `cycle-evidence-thin`,
+`no-next-level` (a `++` mark for a person already at the top level of their
+framework's ladder).
 
 Warning thresholds are set in the Workspace as
 `spec.policy.<id>.<param>` (a whole number of days, or a duration such as `2w`):

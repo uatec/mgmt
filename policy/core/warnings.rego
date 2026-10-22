@@ -68,6 +68,20 @@ warn contains f if {
 	f := lib.finding("negative-unaddressed", p, m.file, m.line, sprintf("negative %s mark for %s on %s has no ~%s action dated on or after it", [c, p, m.date, c]))
 }
 
+# --- no-next-level --------------------------------------------------------
+
+# A ++ mark says "ready for more" (Decision S); at the top of the ladder
+# there is nothing to be ready for. The mark still counts as positive.
+warn contains f if {
+	some m in object.get(input, "evidence", [])
+	m.polarity > 0
+	m.strength == 2
+	p := m.person
+	derive.level[p] in derive.ladder[p]
+	not derive.next_level[p]
+	f := lib.finding("no-next-level", p, m.file, m.line, sprintf("++ %s mark for %s on %s, but %s is the top level of the ladder", [m.competency, p, m.date, derive.level[p]]))
+}
+
 # --- gap-unaddressed ------------------------------------------------------
 
 _has_open_action(p, c) if {

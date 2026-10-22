@@ -36,6 +36,7 @@
       "line": 5,
       "person": "sam",
       "polarity": 1,
+      "strength": 1,
       "text": "led the incident review well"
     },
     {
@@ -45,6 +46,7 @@
       "line": 6,
       "person": "sam",
       "polarity": -1,
+      "strength": 1,
       "text": "quiet in refinement again"
     },
     {
@@ -54,6 +56,7 @@
       "line": 13,
       "person": "priya",
       "polarity": 1,
+      "strength": 1,
       "text": "unblocked the SRE handover"
     }
   ],

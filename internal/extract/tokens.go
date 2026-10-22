@@ -6,7 +6,8 @@ import "strings"
 // RawToken is a sigil token found on a single line. Start and End are byte
 // offsets of the whole token (including the sigil) within the line.
 type RawToken struct {
-	Sigil      byte
+	Sigil      byte // '+' or '-' also for the strong forms ++ and --
+	Strong     bool // ++ or --
 	Body       string
 	Start, End int
 }
@@ -22,7 +23,16 @@ func isBody(c byte) bool {
 	return isLetter(c) || isDigit(c) || c == '.' || c == '_' || c == '-'
 }
 
-// ScanLine finds tokens with sigils + - ~ ! @ in a single line. A sigil counts
+// Mark returns the token as written: sigil (doubled when strong) and body.
+func (t RawToken) Mark() string {
+	if t.Strong {
+		return string([]byte{t.Sigil, t.Sigil}) + t.Body
+	}
+	return string(t.Sigil) + t.Body
+}
+
+// ScanLine finds tokens with sigils + - ~ ! @ in a single line, where + and -
+// may be doubled (++ and --) for strong evidence. A sigil counts
 // only at line start or after whitespace or '(' and when followed by an ASCII
 // letter (or a digit, for '@'). It never returns nil.
 func ScanLine(line string) []RawToken {
@@ -38,17 +48,25 @@ func ScanLine(line string) []RawToken {
 		if i+1 >= len(line) {
 			continue
 		}
-		n := line[i+1]
+		strong := (c == '+' || c == '-') && line[i+1] == c
+		bodyStart := i + 1
+		if strong {
+			bodyStart = i + 2
+			if bodyStart >= len(line) {
+				continue
+			}
+		}
+		n := line[bodyStart]
 		if !isLetter(n) && !(c == '@' && isDigit(n)) {
 			continue
 		}
-		j := i + 1
+		j := bodyStart
 		for j < len(line) && isBody(line[j]) {
 			j++
 		}
 		scanEnd := j
 		end := j
-		for end > i+1 && (line[end-1] == '.' || line[end-1] == '-' || line[end-1] == '_') {
+		for end > bodyStart && (line[end-1] == '.' || line[end-1] == '-' || line[end-1] == '_') {
 			end--
 		}
 		// "@28 Oct": 1-2 digit day, one space, 3-letter month.
@@ -64,7 +82,7 @@ func ScanLine(line string) []RawToken {
 				scanEnd = m
 			}
 		}
-		out = append(out, RawToken{Sigil: c, Body: line[i+1 : end], Start: i, End: end})
+		out = append(out, RawToken{Sigil: c, Strong: strong, Body: line[bodyStart:end], Start: i, End: end})
 		i = scanEnd - 1
 	}
 	return out

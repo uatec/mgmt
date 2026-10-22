@@ -34,9 +34,9 @@ func specExpected() facts.Facts {
 	const f = "notes/2026-W43.md"
 	return facts.Facts{
 		Evidence: []facts.Evidence{
-			{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Date: "2026-10-19", File: f, Line: 5, Text: "led the incident review well"},
-			{Person: "sam", Competency: "collab.planning", Polarity: -1, Date: "2026-10-19", File: f, Line: 6, Text: "quiet in refinement again"},
-			{Person: "priya", Competency: "scope.crossteam", Polarity: 1, Date: "2026-10-19", File: f, Line: 13, Text: "unblocked the SRE handover"},
+			{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Strength: 1, Date: "2026-10-19", File: f, Line: 5, Text: "led the incident review well"},
+			{Person: "sam", Competency: "collab.planning", Polarity: -1, Strength: 1, Date: "2026-10-19", File: f, Line: 6, Text: "quiet in refinement again"},
+			{Person: "priya", Competency: "scope.crossteam", Polarity: 1, Strength: 1, Date: "2026-10-19", File: f, Line: 13, Text: "unblocked the SRE handover"},
 		},
 		Touches: []facts.Touch{
 			{Person: "sam", Competency: "scope.crossteam", Date: "2026-10-19", File: f, Line: 7, Text: "discussed the Zoa access ask"},
@@ -193,8 +193,8 @@ func TestIgnoreComment(t *testing.T) {
 func TestMultipleTokensOneLine(t *testing.T) {
 	got := extractOne(t, "notes/2026-W43.md", "## Sam\n- +ownership +planning both\n")
 	want := []facts.Evidence{
-		{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Date: "2026-10-19", File: "notes/2026-W43.md", Line: 2, Text: "both"},
-		{Person: "sam", Competency: "collab.planning", Polarity: 1, Date: "2026-10-19", File: "notes/2026-W43.md", Line: 2, Text: "both"},
+		{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Strength: 1, Date: "2026-10-19", File: "notes/2026-W43.md", Line: 2, Text: "both"},
+		{Person: "sam", Competency: "collab.planning", Polarity: 1, Strength: 1, Date: "2026-10-19", File: "notes/2026-W43.md", Line: 2, Text: "both"},
 	}
 	if !reflect.DeepEqual(got.Evidence, want) {
 		t.Errorf("evidence = %+v", got.Evidence)
@@ -217,7 +217,7 @@ func TestActionLines(t *testing.T) {
 	if b := got.Actions[1]; b.Done || b.Owner != "sam" || b.Text != "spaced out" {
 		t.Errorf("open action = %+v", b)
 	}
-	want := []facts.Evidence{{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Date: "2026-10-19",
+	want := []facts.Evidence{{Person: "sam", Competency: "delivery.ownership", Polarity: 1, Strength: 1, Date: "2026-10-19",
 		File: "notes/2026-W43.md", Line: 3, Text: "then after"}}
 	if !reflect.DeepEqual(got.Evidence, want) {
 		t.Errorf("continuation evidence = %+v", got.Evidence)
@@ -302,5 +302,29 @@ func TestObsidianLinkHeadingSetsPerson(t *testing.T) {
 	}
 	if len(got.Sections) != 2 {
 		t.Errorf("sections = %+v", got.Sections)
+	}
+}
+
+func TestStrongMarks(t *testing.T) {
+	src := "## Sam\n- ++ownership great\n- --planning bad (--ownership)\n- +ownership plain\n"
+	got := extractOne(t, "notes/2026-W43.md", src)
+	type ps struct {
+		c        string
+		pol, str int
+	}
+	var have []ps
+	for _, e := range got.Evidence {
+		have = append(have, ps{e.Competency, e.Polarity, e.Strength})
+	}
+	want := []ps{
+		{"delivery.ownership", 1, 2},
+		{"collab.planning", -1, 2}, {"delivery.ownership", -1, 2},
+		{"delivery.ownership", 1, 1},
+	}
+	if !reflect.DeepEqual(have, want) {
+		t.Errorf("evidence = %+v, want %+v", have, want)
+	}
+	if got.Evidence[0].Text != "great" {
+		t.Errorf("text = %q", got.Evidence[0].Text)
 	}
 }

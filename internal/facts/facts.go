@@ -10,11 +10,12 @@ type Source struct {
 	Line int    `json:"line"`
 }
 
-// Evidence is a +x or -x mark against a competency.
+// Evidence is a +x, -x, ++x or --x mark against a competency.
 type Evidence struct {
 	Person     string `json:"person"`
 	Competency string `json:"competency"`
 	Polarity   int    `json:"polarity"`
+	Strength   int    `json:"strength"` // 1 for +x / -x, 2 for ++x / --x
 	Date       string `json:"date"`
 	File       string `json:"file"`
 	Line       int    `json:"line"`

@@ -351,7 +351,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 	marks := []string{}
 	for _, t := range toks {
 		if t.Sigil != '@' {
-			marks = append(marks, string(t.Sigil)+t.Body)
+			marks = append(marks, t.Mark())
 		}
 	}
 	attributed := person != ""
@@ -394,7 +394,7 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 			case '+', '-':
 				x.diag("evidence-in-action", lineNo, fmt.Sprintf(
 					"evidence token %q on an action; evidence belongs on its own line (use ~ to say what the action addresses)",
-					string(t.Sigil)+t.Body))
+					t.Mark()))
 			}
 		}
 		x.out.Actions = append(x.out.Actions, facts.Action{
@@ -411,12 +411,15 @@ func (x *extractor) line(start, end int, isAction, done bool) {
 				continue
 			}
 			if id, ok := x.competency(person, t.Body, lineNo); ok {
-				pol := 1
+				pol, strength := 1, 1
 				if t.Sigil == '-' {
 					pol = -1
 				}
+				if t.Strong {
+					strength = 2
+				}
 				x.out.Evidence = append(x.out.Evidence, facts.Evidence{
-					Person: person, Competency: id, Polarity: pol, Date: date, File: x.file, Line: lineNo, Text: txt,
+					Person: person, Competency: id, Polarity: pol, Strength: strength, Date: date, File: x.file, Line: lineNo, Text: txt,
 				})
 				x.count(person)
 			}

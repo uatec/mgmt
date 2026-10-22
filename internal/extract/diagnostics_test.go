@@ -27,6 +27,7 @@ func TestExtractDiagnostics(t *testing.T) {
 		{"heading-multi-person", w, "# 2026-W43\n\n## Sam and Priya\n- +ownership x\n", []wantDiag{{"heading-multi-person", 4, ""}}, ""},
 		{"heading-multi-person ok with @", w, "# 2026-W43\n\n## Sam and Priya\n- @sam +ownership x\n", nil, ""},
 		{"evidence-in-action", w, "# 2026-W43\n\n## Sam\n- [ ] +ownership do it\n", []wantDiag{{"evidence-in-action", 4, ""}}, ""},
+		{"evidence-in-action strong", w, "# 2026-W43\n\n## Sam\n- [ ] ++ownership do it\n", []wantDiag{{"evidence-in-action", 4, ""}}, `evidence token "++ownership" on an action; evidence belongs on its own line (use ~ to say what the action addresses)`},
 		{"input-unknown typo", w, "# 2026-W43\n\n## Sam\n- !self-asessment\n", []wantDiag{{"input-unknown", 4, "self-assessment"}}, ""},
 		{"input case-insensitive", w, "# 2026-W43\n\n## Sam\n- !Self-Assessment\n", nil, ""},
 		{"input out of range", "notes/2027-06-01.md", "## Sam\n- !self-assessment\n", []wantDiag{{"input-unknown", 2, ""}}, ""},

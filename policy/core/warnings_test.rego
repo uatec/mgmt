@@ -63,6 +63,9 @@ ev(c, pol, date, line) := {
 	"date": date, "file": "notes/n.md", "line": line, "text": "t",
 }
 
+# sev is a strong (++ / --) evidence record.
+sev(c, pol, date, line) := object.union(ev(c, pol, date, line), {"strength": 2})
+
 act(text, date, due, done, addresses, line) := {
 	"id": sprintf("a%d", [line]), "person": "sam", "owner": "me", "due": due, "done": done,
 	"addresses": addresses, "date": date, "file": "notes/n.md", "line": line, "text": text,
@@ -202,6 +205,50 @@ test_negative_after_now_ignored if {
 test_negative_exactly_grace_days_old if {
 	d := planning_evidence(quiet, [ev("collab.planning", -1, "2026-10-14", 4)])
 	count(fired(d, "negative-unaddressed")) == 0
+}
+
+test_strong_negative_unaddressed_fires if {
+	d := planning_evidence(quiet, [sev("collab.planning", -1, "2026-10-10", 4)])
+	fs := fired(d, "negative-unaddressed")
+	count(fs) == 1
+	some f in fs
+	f.line == 4
+}
+
+# --- no-next-level --------------------------------------------------------
+
+top_strong := planning_evidence(quiet, [sev("collab.planning", 1, "2026-10-14", 4)])
+
+test_no_next_level_fires_at_top if {
+	fs := fired(top_strong, "no-next-level")
+	count(fs) == 1
+	some f in fs
+	f.person == "sam"
+	f.file == "notes/n.md"
+	f.line == 4
+	contains(f.message, "IC3")
+}
+
+test_no_next_level_not_for_plain_positive if {
+	count(fired(quiet, "no-next-level")) == 0
+}
+
+test_no_next_level_not_for_strong_negative if {
+	d := planning_evidence(quiet, [sev("collab.planning", -1, "2026-10-20", 4)])
+	count(fired(d, "no-next-level")) == 0
+}
+
+test_no_next_level_not_below_top if {
+	count(fired(with_sam(top_strong, {"level": "IC2"}), "no-next-level")) == 0
+}
+
+test_no_next_level_level_off_ladder_silent if {
+	count(fired(with_sam(top_strong, {"level": "IC9"}), "no-next-level")) == 0
+}
+
+test_no_next_level_still_counts_positive if {
+	derive_status := data.mgmt.derive.status.sam["collab.planning"] with input as top_strong
+	derive_status.positives == 1
 }
 
 # --- gap-unaddressed ------------------------------------------------------
