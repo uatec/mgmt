@@ -221,11 +221,15 @@ _in_window(w, date) if {
 # (+1, +2, -1, -2 by polarity and strength; 0 when neutralised) and the
 # completed action that neutralised it (or null).
 #
-# A negative is neutralised only by a completed action addressing it. For
-# the k completed actions of p addressing c dated on or before now (in or
-# after the window), the k most recent eligible negatives (those with a
-# completed action dated on or after them) are neutralised, the i-th most
-# recent paired with the i-th most recent action.
+# A negative is neutralised only by a completed action addressing it
+# (Ruling L4): p's completed actions addressing c, dated up to now (in or
+# after the window), are matched one-to-one with negatives dated on or
+# before them, greedily from the newest negative. With negatives n_0..n_m
+# newest first and c_j the number of those actions dated on or after n_j,
+# the largest matching among n_0..n_j has size
+#   M(j) = min(j+1, min over 1 <= t <= j of c_(t-1) + (j+1-t), c_j)
+# and n_j is neutralised when M(j) > M(j-1). Pairing the i-th neutralised
+# negative with the i-th newest action is then always date-valid.
 scored[p][c] := [object.union(m, {"weight": _weight(m, nb), "neutralisedBy": nb}) |
 	some i, m in newest
 	nb := object.get(paired, i, null)
@@ -234,8 +238,19 @@ scored[p][c] := [object.union(m, {"weight": _weight(m, nb), "neutralisedBy": nb}
 	some c, ms in comps
 	newest := array.reverse(ms)
 	done := _completed(p, c)
-	eligible := [i | some i, m in newest; m.polarity < 0; _eligible(m, done)]
-	paired := {i: _action_ref(done[j]) | some j, i in eligible; j < count(done)}
+	negs := [i | some i, m in newest; m.polarity < 0]
+	cs := [count([a | some a in done; a.date >= newest[i].date]) | some i in negs]
+	neutralised := [i | some j, i in negs; _matched(cs, j) > _matched(cs, j - 1)]
+	paired := {i: _action_ref(done[k]) | some k, i in neutralised}
+}
+
+# _matched(cs, j) is M(j) above: the most of the j+1 newest negatives that
+# can be neutralised; 0 before the first.
+_matched(_, j) := 0 if j < 0
+
+_matched(cs, j) := min(cuts | {j + 1}) if {
+	j >= 0
+	cuts := {x | some t in numbers.range(1, j + 1); x := cs[t - 1] + ((j + 1) - t)}
 }
 
 # _completed(p, c) is p's completed actions addressing c, dated up to now,
@@ -246,11 +261,6 @@ _completed(p, c) := array.reverse(_sorted_by_loc([a |
 	c in a.addresses
 	a.date <= _now
 ]))
-
-_eligible(m, done) if {
-	count(done) > 0
-	m.date <= done[0].date
-}
 
 _action_ref(a) := {"file": a.file, "line": a.line, "text": a.text}
 

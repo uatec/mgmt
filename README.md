@@ -170,12 +170,13 @@ unproven or disproven is a **gap**.
 
 A negative is **neutralised** (it scores 0 instead) only when an action
 addressing it is completed. Fixing a mistake brings the score back to where it
-was; it doesn't add to it. For each person and competency, the completed
-(`- [x]`) actions that address it with `~x`, dated up to today (inside the
-window or after it), each neutralise one negative: the most recent negatives
-dated on or before the newest such action, the most recent paired with the
-newest action. An open action never neutralises anything, though it does
-silence `negative-unaddressed` and `gap-unaddressed`. `mgmt explain` shows
+was; it doesn't add to it. For each person and competency, each completed
+(`- [x]`) action that addresses it with `~x`, dated up to today (inside the
+window or after it), neutralises at most one negative dated on or before it.
+Negatives are matched newest first, so as many as possible are neutralised
+and an action never neutralises a negative dated after it. An open action
+never neutralises anything, though it does silence `negative-unaddressed` and
+`gap-unaddressed`. `mgmt explain` shows
 each mark's weight and the action that neutralised it.
 
 With `scoring: latest` the most recent mark decides instead: disproven if it

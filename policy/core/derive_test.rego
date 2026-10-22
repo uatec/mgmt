@@ -360,7 +360,7 @@ test_status_weighted_action_after_window_before_now_neutralises if {
 }
 
 test_status_weighted_action_for_other_competency_or_person_ignored if {
-	other := object.union(done(["collab.planning"], "2026-10-08", 9), {})
+	other := done(["collab.planning"], "2026-10-08", 9)
 	theirs := object.union(done(own, "2026-10-08", 9), {"person": "jo"})
 	weighted([ev(-1, "2026-10-02", "n.md", 2)], [other, theirs]).score == -1
 }
@@ -394,6 +394,67 @@ test_scored_pairing_ties_by_file_and_line if {
 	acts := [done(own, "2026-10-09", 4), done(own, "2026-10-09", 8)]
 	[m.neutralisedBy.line | some m in scored(es, acts)] == [8, 4]
 }
+
+# Ruling L4: each completed action neutralises at most one negative dated on
+# or before it, newest first. An action dated before a negative never
+# neutralises it, even when a newer action has already been used.
+l4_negatives := [
+	evs(-1, 2, "2026-09-20", "n.md", 20),
+	ev(-1, "2026-10-02", "n.md", 2),
+	ev(-1, "2026-10-06", "n.md", 6),
+]
+
+l4_actions := [done(own, "2026-10-01", 101), done(own, "2026-10-08", 108)]
+
+test_scored_l4_date_valid_matching if {
+	s := scored(l4_negatives, l4_actions)
+	[[m.line, m.weight] | some m in s] == [[6, 0], [2, -1], [20, 0]]
+	[_by_line(m) | some m in s] == [108, null, 101]
+}
+
+test_status_l4_plus_plus_with_matching_proven if {
+	es := array.concat([ev(1, "2026-08-01", "n.md", 30), ev(1, "2026-08-02", "n.md", 31)], l4_negatives)
+	s := weighted(es, l4_actions)
+	s.status == "proven"
+	s.score == 1
+}
+
+# _by_line(m) is the line of the action that neutralised m, or null.
+_by_line(m) := m.neutralisedBy.line if m.neutralisedBy != null else := null
+
+# _action_date(acts, ref) is the date of the action ref points at.
+_action_date(acts, ref) := a.date if {
+	some a in acts
+	a.line == ref.line
+}
+
+# Every neutralising action is dated on or after the negative it neutralises.
+test_scored_pairings_are_date_valid if {
+	cases := [
+		[l4_negatives, l4_actions],
+		[
+			[ev(-1, "2026-10-01", "n.md", 1), ev(-1, "2026-10-03", "n.md", 3), ev(-1, "2026-10-05", "n.md", 5), ev(-1, "2026-10-07", "n.md", 7)],
+			[done(own, "2026-10-02", 102), done(own, "2026-10-04", 104), done(own, "2026-10-08", 108)],
+		],
+		[
+			[ev(-1, "2026-10-05", "n.md", 5), ev(-1, "2026-10-06", "n.md", 6)],
+			[done(own, "2026-10-01", 101), done(own, "2026-10-02", 102), done(own, "2026-10-07", 107)],
+		],
+	]
+	every cs in cases {
+		every m in scored(cs[0], cs[1]) {
+			_valid_pair(cs[1], m)
+		}
+	}
+	# Second case: 10-07 <- 10-08, 10-03 <- 10-04, 10-01 <- 10-02; 10-05 stays.
+	[_by_line(m) | some m in scored(cases[1][0], cases[1][1])] == [108, null, 104, 102]
+	# Third: only 10-07 can neutralise, and it takes the newest negative.
+	[_by_line(m) | some m in scored(cases[2][0], cases[2][1])] == [107, null]
+}
+
+_valid_pair(_, m) if m.neutralisedBy == null
+
+_valid_pair(acts, m) if _action_date(acts, m.neutralisedBy) >= m.date
 
 test_status_weighted_outside_window_ignored if {
 	weighted([ev(1, "2026-07-01", "n.md", 1)], []).status == "unproven"

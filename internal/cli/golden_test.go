@@ -502,8 +502,8 @@ func TestExplainWeightedRule(t *testing.T) {
 	}
 }
 
-// TestExplainLatestRule covers the latest rule line, which no team cycle
-// uses: no score, no weights, and the deciding mark flagged.
+// TestExplainLatestRule covers the latest rule's rendering: no score, no
+// weights, and the deciding mark flagged.
 func TestExplainLatestRule(t *testing.T) {
 	got := renderExplain(t, explainView("latest", 1,
 		considered("2026-09-01", "-", -1, 3, true, nil),
@@ -515,6 +515,49 @@ func TestExplainLatestRule(t *testing.T) {
 	)
 	if strings.Contains(got, "Score:") || strings.Contains(got, "neutralised") {
 		t.Errorf("latest explain shows weighted working:\n%s", got)
+	}
+}
+
+// TestLatestCycleThroughPipeline runs explain and review on the team
+// fixture with ensek-2026-h2 switched to scoring: latest, so the deciding
+// mark and the score-less status line come from real marks.
+func TestLatestCycleThroughPipeline(t *testing.T) {
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "team"))); err != nil {
+		t.Fatal(err)
+	}
+	cycle := filepath.Join(root, "resources", "cycles", "ensek-2026-h2.yaml")
+	data, err := os.ReadFile(cycle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("scoring: weighted")) {
+		t.Fatal("team cycle no longer sets scoring: weighted")
+	}
+	if err := os.WriteFile(cycle, bytes.Replace(data, []byte("scoring: weighted"), []byte("scoring: latest"), 1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := func(args ...string) string {
+		t.Helper()
+		var stdout, stderr bytes.Buffer
+		if code := Run(append([]string{"--now", "2026-10-21"}, args...), root, &stdout, &stderr); code != 0 {
+			t.Fatalf("%v: exit %d, stderr %s", args, code, stderr.String())
+		}
+		return stdout.String()
+	}
+	explain := run("explain", "sam", "planning")
+	wantAll(t, explain,
+		"Rule: latest — the most recent mark decides; proven needs at least 1 positive mark\nWindow: 2026-04-01 to 2026-09-30 (ensek-2026-h2)\n",
+		"## Considered\n- 2026-09-14 -- · skipped the planning session without telling the team (notes/2026-W38.md:4) ← decides\n"+
+			"- 2026-08-17 + · ran the refinement session well (notes/2026-W34.md:4)\n",
+	)
+	if strings.Contains(explain, "Score:") {
+		t.Errorf("latest explain shows a score:\n%s", explain)
+	}
+	review := run("review", "sam")
+	wantAll(t, review, "### collab.planning · Contributes actively to planning and refinement\n", "Status: disproven\n")
+	if strings.Contains(review, "(score") {
+		t.Errorf("latest review shows a score:\n%s", review)
 	}
 }
 
