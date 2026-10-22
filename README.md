@@ -297,5 +297,17 @@ No rebuild needed for any of these.
 - **Reports:** a template in `reports/` named like a core report (`prep`, `review`, `promo`, `explain`, `status`, and `status-yaml` for `status --format yaml`) replaces it; any other `reports/<name>.tmpl` runs with `mgmt report <name> [<person>]`.
 - **Thresholds:** override warning thresholds in `Workspace.spec.policy.<id>` (see [Errors and warnings](#errors-and-warnings)).
 
+### Facts document
+
+`mgmt facts` prints the input every policy and report sees. Two parts matter
+most for policy authors:
+
+- `frameworks.<name>` is the effective framework: `levels` (the ladder) and
+  `competencies.<id>` with `id`, `title`, `theme`, `summary` and `levels`
+  (`<level>: <descriptor>`), including everything pulled in by `includes`.
+  Read competency data from here, not from `resources.CompetencyFramework`.
+- `evidence[]` records carry `polarity` (`1` or `-1`) and `strength` (`1`, or
+  `2` for `++`/`--`).
+
 Escape hatch (best effort): policies follow Conftest conventions, so
 `mgmt facts | conftest test --policy policy/ -` works.
