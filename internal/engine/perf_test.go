@@ -27,38 +27,36 @@ func TestLintPerformance(t *testing.T) {
 		}
 	}
 	write("resources/workspace.yaml", "apiVersion: mgmt/v1alpha1\nkind: Workspace\nmetadata:\n  name: default\nspec:\n  notes: notes/**/*.md\n  me: [me]\n  defaultWindow: 90d\n  oneToOneCadence: 14d\n")
-	write("resources/framework.yaml", `apiVersion: mgmt/v1alpha1
-kind: CompetencyFramework
-metadata:
-  name: eng
-spec:
-  includes: [core]
-  levels: [IC1]
-  competencies:
-    - { id: delivery.ownership, title: Ownership, tokens: [ownership], levels: {IC1: owns it} }
-    - { id: scope.crossteam, title: Cross team, tokens: [crossteam], levels: {IC1: spans teams} }
----
-apiVersion: mgmt/v1alpha1
-kind: CompetencyFramework
-metadata:
-  name: core
-spec:
-  levels: [IC1]
-  competencies:
-    - { id: collab.planning, title: Planning, tokens: [planning], levels: {IC1: plans} }
-`)
+	// A realistic matrix: core has 6 competencies, eng includes core and adds
+	// 4 more, and every competency has a descriptor at each of 7 levels.
+	levels := []string{"IC1", "IC2", "IC3", "IC4", "IC5", "IC6", "IC7"}
+	framework := func(name, includes, prefix string, n int) string {
+		var b strings.Builder
+		fmt.Fprintf(&b, "apiVersion: mgmt/v1alpha1\nkind: CompetencyFramework\nmetadata:\n  name: %s\nspec:\n%s  levels: [%s]\n  competencies:\n", name, includes, strings.Join(levels, ", "))
+		for c := 1; c <= n; c++ {
+			var ds []string
+			for _, l := range levels {
+				ds = append(ds, fmt.Sprintf("%s: does %s%d at %s", l, prefix, c, l))
+			}
+			fmt.Fprintf(&b, "    - { id: %s.c%d, title: %s %d, tokens: [%s%d], summary: s, levels: {%s} }\n", prefix, c, prefix, c, prefix, c, strings.Join(ds, ", "))
+		}
+		return b.String()
+	}
+	write("resources/framework.yaml", framework("core", "", "core", 6)+"---\n"+framework("eng", "  includes: [core]\n", "eng", 4))
 	var people strings.Builder
 	names := make([]string, 10)
 	for i := range names {
 		names[i] = fmt.Sprintf("person%d", i)
-		fmt.Fprintf(&people, "---\napiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: %s\nspec:\n  displayName: Person %d\n  aliases: [P%d]\n  framework: eng\n  level: IC1\n  since: 2026-01-01\n", names[i], i, i)
+		fmt.Fprintf(&people, "---\napiVersion: mgmt/v1alpha1\nkind: Person\nmetadata:\n  name: %s\nspec:\n  displayName: Person %d\n  aliases: [P%d]\n  framework: eng\n  level: %s\n  since: 2026-01-01\n", names[i], i, i, levels[i%len(levels)])
 	}
 	write("resources/people.yaml", people.String()[4:])
 	for w := 1; w <= 52; w++ {
 		var b strings.Builder
 		fmt.Fprintf(&b, "# 2026-W%02d\n\n", w)
 		for i := range names {
-			fmt.Fprintf(&b, "## 1:1 P%d\n- notes for the week\n- +ownership shipped it\n- -planning was quiet\n- +crossteam helped another team\n- ~planning talked it through\n- [ ] follow up on planning @fri ~planning\n\n", i)
+			// Rotate through all 10 competencies across the weeks.
+			core1, core2, eng1 := 1+(w+i)%6, 1+(w+i+3)%6, 1+(w+i)%4
+			fmt.Fprintf(&b, "## 1:1 P%d\n- notes for the week\n- +core%d shipped it\n- -core%d was quiet\n- ++eng%d led the migration\n- --eng%d missed the review\n- +eng%d helped another team\n- ~core%d talked it through\n- [ ] follow up @fri ~core%d\n\n", i, core1, core2, eng1, 1+(eng1%4), eng1, core2, core2)
 		}
 		write(fmt.Sprintf("notes/2026-W%02d.md", w), b.String())
 	}
