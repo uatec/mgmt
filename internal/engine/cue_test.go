@@ -98,6 +98,7 @@ func TestValidateSchemaInvalid(t *testing.T) {
 			"c.yaml": framework("core", "  levels: [IC1, IC2, IC3]\n", "    - {id: b.y, title: Why}\n"),
 		}, "resources/b.yaml", 1, `spec.levels: ladder [IC1, IC2] differs from included framework "core" [IC1, IC2, IC3]`},
 		{"descriptor off the ladder", map[string]string{"b.yaml": framework("eng", ladder, "    - {id: a.x, title: X, levels: {IC1: ex, IC9: why}}\n")}, "resources/b.yaml", 1, `competency "a.x": descriptor for level "IC9", which is not on the ladder`},
+		{"empty descriptor", map[string]string{"b.yaml": framework("eng", ladder, "    - {id: a.x, title: X, levels: {IC1: \"\"}}\n")}, "resources/b.yaml", 1, "levels.IC1"},
 		{"duplicate id across include", map[string]string{
 			"b.yaml": framework("eng", ladder+"  includes: [core]\n", oneComp),
 			"c.yaml": framework("core", ladder, oneComp),

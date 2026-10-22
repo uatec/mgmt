@@ -48,7 +48,7 @@ import "time"
 			title:    string
 			tokens?:  [...#Token]
 			summary?: string
-			levels?: [string]: string
+			levels?: [string]: string & !=""
 		}]
 	}
 }
