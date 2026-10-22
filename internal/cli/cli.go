@@ -37,11 +37,15 @@ commands:
                                        print the team matrix and cycle checks
   report <name> [<person>] [--cycle NAME]
                                        run a workspace report (reports/<name>.tmpl)
+  completion zsh|bash|fish             print the shell completion script
 `
 
 // Run executes one mgmt invocation against the workspace at root and returns
 // the exit code. Command output goes to stdout, or to --out FILE.
 func Run(args []string, root string, stdout, stderr io.Writer) int {
+	if len(args) > 0 && args[0] == "__complete" {
+		return runComplete(args[1:], root, stdout) // hidden: called by the completion scripts
+	}
 	global := flag.NewFlagSet("mgmt", flag.ContinueOnError)
 	global.SetOutput(io.Discard)
 	now := global.String("now", time.Now().Format("2006-01-02"), "")
@@ -80,6 +84,8 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 		code = runStatus(rest[1:], root, *now, &buf, stderr)
 	case "report":
 		code = runCustomReport(rest[1:], root, *now, &buf, stderr)
+	case "completion":
+		code = runCompletion(rest[1:], &buf, stderr)
 	default:
 		return usageError(stderr, fmt.Sprintf("unknown command %q", rest[0]))
 	}

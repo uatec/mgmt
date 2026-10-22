@@ -179,8 +179,25 @@ and `mgmt review sam --out sam.md`.
 | `mgmt explain <person> <competency> [--cycle <name>]` | why a competency has its status |
 | `mgmt report <name> [<person>]` | run a workspace report template (`reports/<name>.tmpl`) |
 | `mgmt facts` | print the facts document as JSON |
+| `mgmt completion zsh\|bash\|fish` | print the shell completion script (see [Tab completion](#tab-completion)) |
 
 `<person>` accepts a Person name or alias.
+
+### Tab completion
+
+Add one line to your shell config:
+
+```sh
+source <(mgmt completion zsh)      # ~/.zshrc
+source <(mgmt completion bash)     # ~/.bashrc
+mgmt completion fish | source      # ~/.config/fish/config.fish
+```
+
+Tab then completes commands, flags and flag values (`--format`, `--cycle`), and
+your data: people and their aliases, the competencies of that person's
+framework (`mgmt explain sam pl<Tab>`), cycle names and your own report names.
+Candidates come from `resources/` and `reports/` in the current directory, so
+outside a workspace only commands and flags complete. Notes are never read.
 
 ## Notes syntax
 
