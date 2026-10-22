@@ -255,6 +255,11 @@ test_no_next_level_fires_on_or_after_level_since if {
 	count(fired(with_sam(top_strong, {"levelSince": "2026-10-14"}), "no-next-level")) == 1
 }
 
+# A levelSince before since is clamped to since, as every window is.
+test_no_next_level_level_since_before_since_clamps if {
+	count(fired(with_sam(top_strong, {"since": "2026-10-15", "levelSince": "2026-01-01"}), "no-next-level")) == 0
+}
+
 test_no_next_level_level_since_defaults_to_since if {
 	d := planning_evidence(quiet, [sev("collab.planning", 1, "2026-04-30", 4)])
 	count(fired(d, "no-next-level")) == 0

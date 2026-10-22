@@ -756,6 +756,21 @@ test_promo_excludes_evidence_before_level_since if {
 	locs(p.competencies[0].evidence) == ["notes/b.md:2"]
 }
 
+# A levelSince before since is clamped to since, as every window is.
+test_promo_level_since_before_since_clamps if {
+	facts := at_ic2([
+		{"op": "replace", "path": "/resources/Person/sam/spec/since", "value": "2026-07-01"},
+		{"op": "add", "path": "/resources/Person/sam/spec/levelSince", "value": "2026-01-01"},
+		{"op": "replace", "path": "/evidence", "value": [
+			pmark("delivery.ownership", 1, 2, "2026-06-30", "notes/a.md", 1),
+			pmark("delivery.ownership", 1, 2, "2026-07-01", "notes/b.md", 2),
+		]},
+	])
+	p := report.promo.sam with input as facts
+	p.levelSince == "2026-07-01"
+	locs(p.competencies[0].evidence) == ["notes/b.md:2"]
+}
+
 # Evidence before the cycle window still counts: the packet spans cycles.
 test_promo_ignores_cycle_window if {
 	facts := at_ic2([{"op": "replace", "path": "/evidence", "value": [pmark("delivery.ownership", 1, 2, "2026-05-02", "notes/a.md", 1)]}])

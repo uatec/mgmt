@@ -35,10 +35,11 @@ _framework(p) := _effective[_persons[p].spec.framework]
 
 _since(p) := object.get(_persons[p], ["spec", "since"], "")
 
-# level_since[p] is when the person reached their level (Decision Q).
+# level_since[p] is when the person reached their level (Decision Q),
+# clamped to since: nothing before since counts, as in every window.
 level_since[p] := _level_since(p) if some p in object.keys(_persons)
 
-_level_since(p) := object.get(_persons[p], ["spec", "levelSince"], _since(p))
+_level_since(p) := lib.max_date(object.get(_persons[p], ["spec", "levelSince"], _since(p)), _since(p))
 
 # _includes maps each framework to the frameworks it includes directly.
 _includes := {name: object.get(fw, ["spec", "includes"], []) | some name, fw in _frameworks}
@@ -120,7 +121,7 @@ _counted(i) if "minCount" in object.keys(i)
 
 # --- per-person window and settings ---------------------------------------
 
-window[p] := {"from": lib.max_date(lib.max_date(from, _since(p)), _level_since(p)), "to": to, "cycle": cy} if {
+window[p] := {"from": lib.max_date(from, _level_since(p)), "to": to, "cycle": cy} if {
 	some p in object.keys(_persons)
 	[from, to, cy] := _window_range(p)
 }
