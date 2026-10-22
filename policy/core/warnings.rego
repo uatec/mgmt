@@ -70,8 +70,8 @@ warn contains f if {
 
 # --- no-next-level --------------------------------------------------------
 
-# A ++ mark says "ready for more" (Decision S); at the top of the ladder
-# there is nothing to be ready for. The mark still counts as positive. Only
+# A ++ mark shows work at the next level up (Decision S); at the top of the
+# ladder there is no level up. The mark still counts as positive. Only
 # marks since the person reached their level, up to now, count (Decision Q).
 warn contains f if {
 	some m in object.get(input, "evidence", [])

@@ -153,7 +153,7 @@ kind: ReviewCycle
 metadata: {name: h2-2026}
 spec:
   period: {from: 2026-07-01, to: 2026-12-31}
-  selector: {people: [alex]}    # or matchFrameworks: [core]: everyone whose framework is or includes core
+  selector: {people: [alex]}    # or matchFrameworks: [core] for everyone whose framework is or includes core
   evidence: {minPerCompetency: 1, negativeOverrides: true}
   inputs:                       # things to collect; record receipt with !name in notes
     - {name: self-assessment, required: true}
@@ -234,7 +234,7 @@ Person and date are inherited from context, so a mark is a single token.
 - `+x` is positive evidence, `-x` negative evidence and `~x` a neutral "discussed"
   touch, where `x` is a competency id or token.
 - `++x` and `--x` are strong evidence: praise worth raising and a serious
-  concern. A `++` also says the person is ready for more; a `--` counts as a
+  concern. A `++` also shows work at the next level up; a `--` counts as a
   negative mark and needs addressing like any other. Each still counts as one
   mark in status. They are not allowed on action lines.
 - `- [ ]` is an open action and `- [x]` a closed one. On an action, `@date` sets
