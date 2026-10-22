@@ -66,6 +66,8 @@ func TestGolden(t *testing.T) {
 		{"team", []string{"explain", "sam", "delivery.ownership"}, 0, "explain-sam-ownership.md", ""},
 		{"team", []string{"explain", "jo", "PLANNING"}, 0, "explain-jo-planning.md", ""},
 		{"team", []string{"explain", "priya", "crossteam"}, 0, "explain-priya-crossteam.md", ""},
+		{"team", []string{"explain", "alex", "feedback"}, 0, "explain-alex-feedback.md", ""},
+		{"team", []string{"explain", "sam", "feedback", "--cycle", "retro-2026-h1"}, 0, "explain-sam-feedback-retro.md", ""},
 		{"team", []string{"explain", "sam", "plannig"}, 2, "", "explain-plannig.stderr"},
 		{"team", []string{"explain", "sam", "zzzzzz"}, 2, "", "explain-zzzzzz.stderr"},
 		{"team", []string{"promo", "priya"}, 0, "promo-priya.md", ""},
@@ -437,34 +439,125 @@ func TestPrepTemplateBranches(t *testing.T) {
 	}
 }
 
-// TestExplainCountingRule covers the counting rule line, which no team
-// cycle uses.
-func TestExplainCountingRule(t *testing.T) {
-	view := map[string]any{
+// explainView is a synthetic explain view-model under rule with minimum
+// min, considering the given marks.
+func explainView(rule string, min int, considered ...map[string]any) map[string]any {
+	cs := make([]any, len(considered))
+	for i, c := range considered {
+		cs[i] = c
+	}
+	return map[string]any{
 		"person":     map[string]any{"name": "sam", "framework": "eng", "level": "IC3"},
 		"competency": map[string]any{"id": "collab.planning", "title": "Plans"},
 		"descriptor": nil,
-		"required":   false, "status": "proven", "rule": "counting", "positives": 2, "negatives": 1,
-		"settings": map[string]any{"minPerCompetency": 2, "negativeOverrides": false},
-		"window":   map[string]any{"from": "2026-07-23", "to": "2026-10-21", "cycle": nil},
-		"considered": []any{map[string]any{
-			"date": "2026-09-01", "polarity": -1, "strength": 1, "tag": "-", "text": "t", "file": "notes/a.md", "line": 3, "decides": false,
-		}},
-		"outside": []any{},
+		"required":   false, "status": "disproven", "rule": rule, "positives": 1, "negatives": 2, "score": -1,
+		"settings":   map[string]any{"minPerCompetency": min, "scoring": rule},
+		"window":     map[string]any{"from": "2026-07-23", "to": "2026-10-21", "cycle": nil},
+		"considered": cs,
+		"outside":    []any{},
 	}
+}
+
+func considered(date, tag string, weight int, line int, decides bool, by any) map[string]any {
+	return map[string]any{
+		"date": date, "tag": tag, "weight": weight, "text": "t", "file": "notes/a.md", "line": line,
+		"decides": decides, "neutralisedBy": by,
+	}
+}
+
+func renderExplain(t *testing.T, view map[string]any) string {
+	t.Helper()
 	got, err := render.Render("explain", map[string]any{"view": view}, mgmt.CoreReports, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, want := range []string{
-		"Required: no (eng IC3)\nBar (IC3): not required at IC3\n",
-		"Rule: counting: proven when positives exceed negatives and reach 2 (2 positive, 1 negative)\n",
-		"Window: 2026-07-23 to 2026-10-21 (rolling)\n",
-		"- 2026-09-01 - · t (notes/a.md:3)\n\n## Outside window\n- none\n",
-	} {
+	return got
+}
+
+func wantAll(t *testing.T, got string, wants ...string) {
+	t.Helper()
+	for _, want := range wants {
 		if !strings.Contains(got, want) {
 			t.Errorf("missing %q in\n%s", want, got)
 		}
+	}
+}
+
+// TestExplainWeightedRule covers the weighted rule line with a plural
+// minimum, the score, signed weights and a neutralised negative.
+func TestExplainWeightedRule(t *testing.T) {
+	got := renderExplain(t, explainView("weighted", 2,
+		considered("2026-10-12", "--", -2, 4, false, nil),
+		considered("2026-09-28", "+", 1, 3, false, nil),
+		considered("2026-08-31", "-", 0, 2, false, map[string]any{"file": "notes/b.md", "line": 5, "text": "book a pairing session"}),
+	))
+	wantAll(t, got,
+		"Required: no (eng IC3)\nBar (IC3): not required at IC3\n",
+		"Rule: weighted — proven above 0 with at least 2 positive marks; disproven below 0\nScore: -1 (disproven)\nWindow: 2026-07-23 to 2026-10-21 (rolling)\n",
+		"## Considered\n- 2026-10-12 -- -2 · t (notes/a.md:4)\n- 2026-09-28 + +1 · t (notes/a.md:3)\n"+
+			"- 2026-08-31 - 0 · t (notes/a.md:2) — neutralised by: book a pairing session (notes/b.md:5)\n\n## Outside window\n- none\n",
+	)
+	if strings.Contains(got, "decides") {
+		t.Errorf("weighted explain names a deciding mark:\n%s", got)
+	}
+}
+
+// TestExplainLatestRule covers the latest rule's rendering: no score, no
+// weights, and the deciding mark flagged.
+func TestExplainLatestRule(t *testing.T) {
+	got := renderExplain(t, explainView("latest", 1,
+		considered("2026-09-01", "-", -1, 3, true, nil),
+		considered("2026-08-01", "-", 0, 2, false, map[string]any{"file": "notes/b.md", "line": 5, "text": "x"}),
+	))
+	wantAll(t, got,
+		"Rule: latest — the most recent mark decides; proven needs at least 1 positive mark\nWindow:",
+		"- 2026-09-01 - · t (notes/a.md:3) ← decides\n- 2026-08-01 - · t (notes/a.md:2)\n\n## Outside window\n",
+	)
+	if strings.Contains(got, "Score:") || strings.Contains(got, "neutralised") {
+		t.Errorf("latest explain shows weighted working:\n%s", got)
+	}
+}
+
+// TestLatestCycleThroughPipeline runs explain and review on the team
+// fixture with ensek-2026-h2 switched to scoring: latest, so the deciding
+// mark and the score-less status line come from real marks.
+func TestLatestCycleThroughPipeline(t *testing.T) {
+	root := t.TempDir()
+	if err := os.CopyFS(root, os.DirFS(filepath.Join("..", "..", "testdata", "team"))); err != nil {
+		t.Fatal(err)
+	}
+	cycle := filepath.Join(root, "resources", "cycles", "ensek-2026-h2.yaml")
+	data, err := os.ReadFile(cycle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(data, []byte("scoring: weighted")) {
+		t.Fatal("team cycle no longer sets scoring: weighted")
+	}
+	if err := os.WriteFile(cycle, bytes.Replace(data, []byte("scoring: weighted"), []byte("scoring: latest"), 1), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	run := func(args ...string) string {
+		t.Helper()
+		var stdout, stderr bytes.Buffer
+		if code := Run(append([]string{"--now", "2026-10-21"}, args...), root, &stdout, &stderr); code != 0 {
+			t.Fatalf("%v: exit %d, stderr %s", args, code, stderr.String())
+		}
+		return stdout.String()
+	}
+	explain := run("explain", "sam", "planning")
+	wantAll(t, explain,
+		"Rule: latest — the most recent mark decides; proven needs at least 1 positive mark\nWindow: 2026-04-01 to 2026-09-30 (ensek-2026-h2)\n",
+		"## Considered\n- 2026-09-14 -- · skipped the planning session without telling the team (notes/2026-W38.md:4) ← decides\n"+
+			"- 2026-08-17 + · ran the refinement session well (notes/2026-W34.md:4)\n",
+	)
+	if strings.Contains(explain, "Score:") {
+		t.Errorf("latest explain shows a score:\n%s", explain)
+	}
+	review := run("review", "sam")
+	wantAll(t, review, "### collab.planning · Contributes actively to planning and refinement\n", "Status: disproven\n")
+	if strings.Contains(review, "(score") {
+		t.Errorf("latest review shows a score:\n%s", review)
 	}
 }
 

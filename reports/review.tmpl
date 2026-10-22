@@ -11,7 +11,7 @@
 {{range .competencies}}
 ### {{.id}} · {{.title}}
 Bar ({{$.view.person.level}}): {{.descriptor}}
-Status: {{.status}}
+Status: {{.status}}{{if ne .rule "latest"}} (score {{.score}}){{end}}
 
 Positive:
 {{range .positive}}{{template "evidence" .}}{{else}}- none

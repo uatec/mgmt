@@ -17,7 +17,7 @@ func TestComplete(t *testing.T) {
 		words string // the command line after "mgmt"; the last word is the one being completed
 		want  string // space-separated values, in order; ":files" asks for file names
 	}{
-		{"commands", team, "", "init facts lint prep review promo explain status report completion"},
+		{"commands", team, "", "init facts lint prep review promo explain status report completion help"},
 		{"command prefix", team, "re", "review report"},
 		{"global flag before command", team, "--n", "--now"},
 		{"people", team, "prep ", "alex jo priya sam Samuel"},
@@ -45,6 +45,7 @@ func TestComplete(t *testing.T) {
 		{"report names", ensek, "report ", "okrs"},
 		{"report then person", ensek, "report okrs s", "sam Samuel"},
 		{"completion shells", team, "completion ", "zsh bash fish"},
+		{"help topics", team, "help ", "notes"},
 		{"no data outside a workspace", empty, "prep ", ""},
 		{"commands outside a workspace", empty, "st", "status"},
 		{"nothing for facts", team, "facts ", ""},

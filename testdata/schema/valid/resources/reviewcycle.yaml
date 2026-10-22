@@ -8,7 +8,7 @@ spec:
     people: [sam, priya, jo]     # or matchFrameworks: [eng]
   evidence:
     minPerCompetency: 1
-    negativeOverrides: true
+    scoring: latest
   inputs:                        # external inputs, ticked off as received
     - name: self-assessment
       source: leapsome

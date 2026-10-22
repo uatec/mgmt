@@ -132,7 +132,7 @@ _window_range(p) := [c.spec.period.from, c.spec.period.to, cycle[p]] if {
 
 settings[p] := {
 	"minPerCompetency": object.get(ev, "minPerCompetency", 1),
-	"negativeOverrides": object.get(ev, "negativeOverrides", true),
+	"scoring": object.get(ev, "scoring", "weighted"),
 } if {
 	some p in object.keys(_persons)
 	ev := _cycle_evidence(p)
@@ -217,42 +217,91 @@ _in_window(w, date) if {
 	date <= w.to
 }
 
+# scored[p][c] is the in-window marks, newest first, each with its weight
+# (+1, +2, -1, -2 by polarity and strength; 0 when neutralised) and the
+# completed action that neutralised it (or null).
+#
+# A negative is neutralised only by a completed action addressing it
+# (Ruling L4): p's completed actions addressing c, dated up to now (in or
+# after the window), are matched one-to-one with negatives dated on or
+# before them, greedily from the newest negative. With negatives n_0..n_m
+# newest first and c_j the number of those actions dated on or after n_j,
+# the largest matching among n_0..n_j has size
+#   M(j) = min(j+1, min over 1 <= t <= j of c_(t-1) + (j+1-t), c_j)
+# and n_j is neutralised when M(j) > M(j-1). Pairing the i-th neutralised
+# negative with the i-th newest action is then always date-valid.
+scored[p][c] := [object.union(m, {"weight": _weight(m, nb), "neutralisedBy": nb}) |
+	some i, m in newest
+	nb := object.get(paired, i, null)
+] if {
+	some p, comps in marks
+	some c, ms in comps
+	newest := array.reverse(ms)
+	done := _completed(p, c)
+	negs := [i | some i, m in newest; m.polarity < 0]
+	cs := [count([a | some a in done; a.date >= newest[i].date]) | some i in negs]
+	neutralised := [i | some j, i in negs; _matched(cs, j) > _matched(cs, j - 1)]
+	paired := {i: _action_ref(done[k]) | some k, i in neutralised}
+}
+
+# _matched(cs, j) is M(j) above: the most of the j+1 newest negatives that
+# can be neutralised; 0 before the first.
+_matched(_, j) := 0 if j < 0
+
+_matched(cs, j) := min(cuts | {j + 1}) if {
+	j >= 0
+	cuts := {x | some t in numbers.range(1, j + 1); x := cs[t - 1] + ((j + 1) - t)}
+}
+
+# _completed(p, c) is p's completed actions addressing c, dated up to now,
+# newest first by [date, file, line].
+_completed(p, c) := array.reverse(_sorted_by_loc([a |
+	some a in actions_by[p]
+	a.done == true
+	c in a.addresses
+	a.date <= _now
+]))
+
+_action_ref(a) := {"file": a.file, "line": a.line, "text": a.text}
+
+_weight(_, nb) := 0 if nb != null
+
+_weight(m, null) := m.polarity * object.get(m, "strength", 1)
+
 status[p][c] := {
 	"status": decision[0],
 	"positives": pos,
 	"negatives": neg,
+	"score": score,
 	"decidedBy": decision[1],
-	"rule": _rule_name(s.negativeOverrides),
+	"rule": s.scoring,
 } if {
-	some p, comps in marks
+	some p, comps in scored
 	some c, ms in comps
 	s := settings[p]
 	pos := count([m | some m in ms; m.polarity > 0])
 	neg := count([m | some m in ms; m.polarity < 0])
-	decision := _decide(ms, pos, neg, s.minPerCompetency, s.negativeOverrides)
+	score := sum([m.weight | some m in ms])
+	decision := _decide(ms, pos, score, s.minPerCompetency, s.scoring)
 }
 
-_rule_name(true) := "negativeOverrides"
-
-_rule_name(false) := "counting"
-
-# _decide returns [status, decidedBy].
-_decide(ms, pos, _, minimum, true) := ["unproven", null] if {
+# _decide returns [status, decidedBy] for the newest-first scored marks.
+# latest: the most recent mark decides.
+_decide(ms, pos, _, minimum, "latest") := ["unproven", null] if {
 	count(ms) == 0
-} else := ["disproven", _loc(ms[count(ms) - 1])] if {
-	ms[count(ms) - 1].polarity < 0
-} else := ["proven", _loc(ms[count(ms) - 1])] if {
+} else := ["disproven", _loc(ms[0])] if {
+	ms[0].polarity < 0
+} else := ["proven", _loc(ms[0])] if {
 	pos >= minimum
 } else := ["unproven", null]
 
-_decide(ms, pos, neg, minimum, false) := ["unproven", null] if {
-	count(ms) == 0
-} else := ["proven", null] if {
-	pos > neg
+# weighted: proven above 0 with enough positive marks; disproven below 0.
+_decide(_, pos, score, minimum, "weighted") := ["proven", null] if {
+	score > 0
 	pos >= minimum
-} else := ["unproven", null] if {
-	pos > neg
-} else := ["disproven", null]
+} else := ["disproven", null] if {
+	score < 0
+} else := ["unproven", null]
 
 _loc(m) := {"file": m.file, "line": m.line}
 

@@ -163,6 +163,8 @@ _review_item(p, c) := {
 	"title": _title(p, c),
 	"descriptor": object.get(derive.descriptor, [p, c], null),
 	"status": object.get(derive.status, [p, c, "status"], "unproven"),
+	"score": object.get(derive.status, [p, c, "score"], 0),
+	"rule": object.get(derive.status, [p, c, "rule"], "weighted"),
 	"positive": _newest_first(_tagged([m | some m in ms; m.polarity > 0])),
 	"negative": _newest_first(_tagged([m | some m in ms; m.polarity < 0])),
 	"actions": [a | some a in object.get(derive.addressed_by, [p, c], []); _in_actions_range(p, a.date)],
@@ -193,9 +195,10 @@ _review_inputs(p) := _by_key([[i.name, i] | some i in object.get(derive.inputs, 
 # --- explain --------------------------------------------------------------
 
 # Why a competency has its status: the bar at the person's level (null when
-# the competency is not required there), the rule, the window, and every mark
-# considered, newest first, flagging the one that decided (negativeOverrides
-# only: under counting the totals decide, not a single mark).
+# the competency is not required there), the rule, the score, the window, and
+# every mark considered, newest first, with its weight and the action that
+# neutralised it, flagging the one that decided (latest only: under weighted
+# the score decides, not a single mark).
 explain[p][c] := {
 	"person": _person(p),
 	"competency": {"id": c, "title": _title(p, c)},
@@ -205,9 +208,10 @@ explain[p][c] := {
 	"positives": st.positives,
 	"negatives": st.negatives,
 	"rule": st.rule,
+	"score": st.score,
 	"settings": derive.settings[p],
 	"window": derive.window[p],
-	"considered": _newest_first([object.union(m, {"decides": _decides(st.decidedBy, m)}) | some m in _tagged(derive.marks[p][c])]),
+	"considered": [object.union(m, {"decides": _decides(st.decidedBy, m)}) | some m in _tagged(derive.scored[p][c])],
 	"outside": _newest_first(_tagged(derive.outside[p][c])),
 } if {
 	some p, comps in derive.competencies

@@ -37,6 +37,7 @@ var commandDescs = []candidate{
 	{"status", "print the team matrix and cycle checks"},
 	{"report", "run a workspace report"},
 	{"completion", "print a shell completion script"},
+	{"help", "print the usage or the notes cheat sheet"},
 }
 
 var (
@@ -181,6 +182,10 @@ func positional(cmd string, pos []string, root string) []candidate {
 	case "completion":
 		if n == 0 {
 			return plain(completionShells...)
+		}
+	case "help":
+		if n == 0 {
+			return plain("notes")
 		}
 	}
 	return nil

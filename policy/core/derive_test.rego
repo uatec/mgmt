@@ -85,13 +85,17 @@ ev(pol, date, file, line) := {
 
 with_evidence(d, es) := object.union(d, {"evidence": es})
 
-# with_settings(min, neg) is no_cycle under a cycle (window 2026-01-01..2026-12-31)
-# whose evidence settings are min and neg.
-with_settings(min, neg) := doc(framework, {"sam": sam}, {"c": object.union(h2, {
+# evs(polarity, strength, date, file, line) is ev with an explicit strength
+# (2 for ++ and --).
+evs(pol, strength, date, file, line) := object.union(ev(pol, date, file, line), {"strength": strength})
+
+# with_settings(min, scoring) is no_cycle under a cycle (window
+# 2026-01-01..2026-12-31) whose evidence settings are min and scoring.
+with_settings(min, scoring) := doc(framework, {"sam": sam}, {"c": object.union(h2, {
 	"metadata": {"name": "c"},
 	"spec": {
 		"period": {"from": "2026-01-01", "to": "2026-12-31"},
-		"evidence": {"minPerCompetency": min, "negativeOverrides": neg},
+		"evidence": {"minPerCompetency": min, "scoring": scoring},
 	},
 })})
 
@@ -175,15 +179,15 @@ test_marks_before_level_since_are_outside if {
 }
 
 test_settings_default_without_cycle if {
-	derive.settings.sam == {"minPerCompetency": 1, "negativeOverrides": true} with input as no_cycle
+	derive.settings.sam == {"minPerCompetency": 1, "scoring": "weighted"} with input as no_cycle
 }
 
 test_settings_default_when_cycle_has_no_evidence if {
-	derive.settings.sam == {"minPerCompetency": 1, "negativeOverrides": true} with input as with_cycle
+	derive.settings.sam == {"minPerCompetency": 1, "scoring": "weighted"} with input as with_cycle
 }
 
 test_settings_from_cycle if {
-	derive.settings.sam == {"minPerCompetency": 2, "negativeOverrides": false} with input as with_settings(2, false)
+	derive.settings.sam == {"minPerCompetency": 2, "scoring": "latest"} with input as with_settings(2, "latest")
 }
 
 # --- marks and outside ----------------------------------------------------
@@ -200,87 +204,260 @@ test_marks_in_window_sorted_outside_split if {
 	derive.marks.sam["collab.planning"] == [] with input as d
 }
 
-# --- status: negativeOverrides --------------------------------------------
+# --- status: latest -------------------------------------------------------
 
-test_status_no_marks_unproven if {
-	own_status(no_cycle) == {"status": "unproven", "positives": 0, "negatives": 0, "decidedBy": null, "rule": "negativeOverrides"}
+# latest(es) is sam's ownership status under the latest rule (min 1).
+latest(es) := own_status(with_evidence(with_settings(1, "latest"), es))
+
+test_status_latest_no_marks_unproven if {
+	latest([]) == {"status": "unproven", "positives": 0, "negatives": 0, "score": 0, "decidedBy": null, "rule": "latest"}
 }
 
-test_status_positive_proven if {
-	own_status(with_evidence(no_cycle, [ev(1, "2026-10-01", "n.md", 4)])) == {
-		"status": "proven", "positives": 1, "negatives": 0,
-		"decidedBy": {"file": "n.md", "line": 4}, "rule": "negativeOverrides",
+test_status_latest_positive_proven if {
+	latest([ev(1, "2026-10-01", "n.md", 4)]) == {
+		"status": "proven", "positives": 1, "negatives": 0, "score": 1,
+		"decidedBy": {"file": "n.md", "line": 4}, "rule": "latest",
 	}
 }
 
-test_status_positive_then_negative_disproven if {
-	s := own_status(with_evidence(no_cycle, [ev(-1, "2026-10-02", "n.md", 8), ev(1, "2026-10-01", "n.md", 4)]))
+test_status_latest_positive_then_negative_disproven if {
+	s := latest([ev(-1, "2026-10-02", "n.md", 8), ev(1, "2026-10-01", "n.md", 4)])
 	s.status == "disproven"
 	s.decidedBy == {"file": "n.md", "line": 8}
 	s.positives == 1
 	s.negatives == 1
+	s.score == 0
 }
 
-test_status_negative_then_positive_proven if {
-	s := own_status(with_evidence(no_cycle, [ev(1, "2026-10-02", "n.md", 8), ev(-1, "2026-10-01", "n.md", 4)]))
+test_status_latest_negative_then_positive_proven if {
+	s := latest([ev(1, "2026-10-02", "n.md", 8), ev(-1, "2026-10-01", "n.md", 4)])
 	s.status == "proven"
 	s.decidedBy == {"file": "n.md", "line": 8}
 }
 
-test_status_same_date_ordered_by_file if {
-	s := own_status(with_evidence(no_cycle, [ev(-1, "2026-10-02", "a.md", 9), ev(1, "2026-10-02", "b.md", 1)]))
+# Ten negatives and one later positive: latest says proven, weighted -9.
+test_status_latest_ten_negatives_then_positive_proven if {
+	es := array.concat([ev(-1, sprintf("2026-10-%02d", [i]), "n.md", i) | some i in numbers.range(1, 10)], [ev(1, "2026-10-11", "n.md", 11)])
+	s := latest(es)
+	s.status == "proven"
+	s.score == -9
+}
+
+test_status_latest_same_date_ordered_by_file if {
+	s := latest([ev(-1, "2026-10-02", "a.md", 9), ev(1, "2026-10-02", "b.md", 1)])
 	s.status == "proven"
 	s.decidedBy == {"file": "b.md", "line": 1}
 }
 
-test_status_same_date_and_file_ordered_by_line if {
-	s := own_status(with_evidence(no_cycle, [ev(-1, "2026-10-02", "a.md", 10), ev(1, "2026-10-02", "a.md", 9)]))
+test_status_latest_same_date_and_file_ordered_by_line if {
+	s := latest([ev(-1, "2026-10-02", "a.md", 10), ev(1, "2026-10-02", "a.md", 9)])
 	s.status == "disproven"
 	s.decidedBy == {"file": "a.md", "line": 10}
 }
 
-test_status_marks_outside_window_ignored if {
-	own_status(with_evidence(no_cycle, [ev(1, "2026-07-01", "n.md", 1)])).status == "unproven"
-}
-
-test_status_overrides_min2_single_positive_unproven if {
-	s := own_status(with_evidence(with_settings(2, true), [ev(1, "2026-10-01", "n.md", 1)]))
+test_status_latest_min2_single_positive_unproven if {
+	s := own_status(with_evidence(with_settings(2, "latest"), [ev(1, "2026-10-01", "n.md", 1)]))
 	s.status == "unproven"
 	s.decidedBy == null
-	s.rule == "negativeOverrides"
+	s.rule == "latest"
 }
 
-# --- status: counting -----------------------------------------------------
+# --- status: weighted -----------------------------------------------------
 
-test_status_counting_pos_pos_neg_proven if {
-	s := own_status(with_evidence(with_settings(1, false), [
-		ev(1, "2026-10-01", "n.md", 1), ev(1, "2026-10-02", "n.md", 1), ev(-1, "2026-10-03", "n.md", 1),
-	]))
-	s == {"status": "proven", "positives": 2, "negatives": 1, "decidedBy": null, "rule": "counting"}
+# done(addr, date, line) is a completed action of sam's.
+done(addr, date, line) := object.union(act(addr, date, line), {"done": true})
+
+own := ["delivery.ownership"]
+
+# weighted(es, acts) is sam's ownership status by default settings (no
+# cycle: weighted, min 1) with evidence es and actions acts.
+weighted(es, acts) := own_status(object.union(with_evidence(no_cycle, es), {"actions": acts}))
+
+scored(es, acts) := s if {
+	s := derive.scored.sam["delivery.ownership"] with input as object.union(with_evidence(no_cycle, es), {"actions": acts})
 }
 
-test_status_counting_pos_neg_disproven if {
-	s := own_status(with_evidence(with_settings(1, false), [ev(1, "2026-10-01", "n.md", 1), ev(-1, "2026-10-02", "n.md", 1)]))
+test_status_weighted_no_marks_unproven if {
+	weighted([], []) == {"status": "unproven", "positives": 0, "negatives": 0, "score": 0, "decidedBy": null, "rule": "weighted"}
+}
+
+test_status_weighted_ten_negatives_one_positive_disproven if {
+	es := array.concat([ev(-1, sprintf("2026-10-%02d", [i]), "n.md", i) | some i in numbers.range(1, 10)], [ev(1, "2026-10-11", "n.md", 11)])
+	s := weighted(es, [])
 	s.status == "disproven"
+	s.score == -9
+	s.positives == 1
+	s.negatives == 10
+	s.decidedBy == null
 }
 
-test_status_counting_neg_disproven if {
-	own_status(with_evidence(with_settings(1, false), [ev(-1, "2026-10-02", "n.md", 1)])).status == "disproven"
-}
+plus_plus_strong_minus := [
+	ev(1, "2026-10-01", "n.md", 1),
+	ev(1, "2026-10-02", "n.md", 2),
+	evs(-1, 2, "2026-10-03", "n.md", 3),
+]
 
-test_status_counting_no_marks_unproven if {
-	own_status(with_settings(1, false)).status == "unproven"
-}
-
-test_status_counting_min2_pos_neg_pos_proven if {
-	s := own_status(with_evidence(with_settings(2, false), [
-		ev(1, "2026-10-01", "n.md", 1), ev(-1, "2026-10-02", "n.md", 1), ev(1, "2026-10-03", "n.md", 1),
-	]))
+test_status_weighted_completed_action_neutralises if {
+	s := weighted(plus_plus_strong_minus, [done(own, "2026-10-04", 9)])
 	s.status == "proven"
+	s.score == 2
 }
 
-test_status_counting_min2_single_positive_unproven if {
-	own_status(with_evidence(with_settings(2, false), [ev(1, "2026-10-01", "n.md", 1)])).status == "unproven"
+test_status_weighted_open_action_does_not_neutralise if {
+	s := weighted(plus_plus_strong_minus, [act(own, "2026-10-04", 9)])
+	s.status == "unproven"
+	s.score == 0
+}
+
+test_status_weighted_plus_then_strong_minus if {
+	es := [ev(1, "2026-10-01", "n.md", 1), evs(-1, 2, "2026-10-03", "n.md", 3)]
+	open := weighted(es, [act(own, "2026-10-04", 9)])
+	open.status == "disproven"
+	open.score == -1
+	ticked := weighted(es, [done(own, "2026-10-04", 9)])
+	ticked.status == "proven"
+	ticked.score == 1
+}
+
+test_status_weighted_strong_positive_alone_proven if {
+	s := weighted([evs(1, 2, "2026-10-01", "n.md", 1)], [])
+	s.status == "proven"
+	s.score == 2
+}
+
+test_status_weighted_min2_single_strong_positive_unproven if {
+	s := own_status(with_evidence(with_settings(2, "weighted"), [evs(1, 2, "2026-10-01", "n.md", 1)]))
+	s.status == "unproven"
+	s.score == 2
+	s.rule == "weighted"
+}
+
+test_status_weighted_action_before_negative_does_not_neutralise if {
+	s := weighted([evs(-1, 2, "2026-10-05", "n.md", 5)], [done(own, "2026-10-04", 9)])
+	s.status == "disproven"
+	s.score == -2
+	[m.neutralisedBy | some m in scored([evs(-1, 2, "2026-10-05", "n.md", 5)], [done(own, "2026-10-04", 9)])] == [null]
+}
+
+test_status_weighted_one_action_neutralises_most_recent_eligible if {
+	es := [ev(-1, "2026-10-02", "n.md", 2), ev(-1, "2026-10-06", "n.md", 6)]
+	after_both := scored(es, [done(own, "2026-10-08", 9)])
+	[[m.line, m.weight] | some m in after_both] == [[6, 0], [2, -1]]
+	weighted(es, [done(own, "2026-10-08", 9)]).score == -1
+
+	# Only the older negative is eligible for an action between the two.
+	between := scored(es, [done(own, "2026-10-04", 9)])
+	[[m.line, m.weight] | some m in between] == [[6, -1], [2, 0]]
+}
+
+test_status_weighted_action_after_window_before_now_neutralises if {
+	d := object.union(with_evidence(with_cycle, [ev(-1, "2026-09-01", "n.md", 1)]), {"actions": [done(own, "2026-10-10", 9)]})
+	s := own_status(d)
+	s.score == 0
+	s.status == "unproven"
+	later := object.union(d, {"actions": [done(own, "2026-10-25", 9)]})
+	own_status(later).score == -1
+}
+
+test_status_weighted_action_for_other_competency_or_person_ignored if {
+	other := done(["collab.planning"], "2026-10-08", 9)
+	theirs := object.union(done(own, "2026-10-08", 9), {"person": "jo"})
+	weighted([ev(-1, "2026-10-02", "n.md", 2)], [other, theirs]).score == -1
+}
+
+test_scored_newest_first_with_weights_and_pairing if {
+	es := [
+		ev(1, "2026-10-01", "n.md", 1),
+		ev(-1, "2026-10-02", "n.md", 2),
+		evs(-1, 2, "2026-10-06", "n.md", 6),
+		evs(1, 2, "2026-10-07", "n.md", 7),
+	]
+	acts := [
+		object.union(done(own, "2026-10-09", 19), {"text": "second"}),
+		object.union(done(own, "2026-10-07", 17), {"text": "first"}),
+	]
+	s := scored(es, acts)
+	[[m.line, m.weight] | some m in s] == [[7, 2], [6, 0], [2, 0], [1, 1]]
+	[m.neutralisedBy | some m in s] == [
+		null,
+		{"file": "n.md", "line": 19, "text": "second"},
+		{"file": "n.md", "line": 17, "text": "first"},
+		null,
+	]
+	s[0].strength == 2
+	weighted(es, acts).score == 3
+}
+
+# Same-date actions pair in [date, file, line] order, newest first.
+test_scored_pairing_ties_by_file_and_line if {
+	es := [ev(-1, "2026-10-02", "n.md", 2), ev(-1, "2026-10-03", "n.md", 3)]
+	acts := [done(own, "2026-10-09", 4), done(own, "2026-10-09", 8)]
+	[m.neutralisedBy.line | some m in scored(es, acts)] == [8, 4]
+}
+
+# Ruling L4: each completed action neutralises at most one negative dated on
+# or before it, newest first. An action dated before a negative never
+# neutralises it, even when a newer action has already been used.
+l4_negatives := [
+	evs(-1, 2, "2026-09-20", "n.md", 20),
+	ev(-1, "2026-10-02", "n.md", 2),
+	ev(-1, "2026-10-06", "n.md", 6),
+]
+
+l4_actions := [done(own, "2026-10-01", 101), done(own, "2026-10-08", 108)]
+
+test_scored_l4_date_valid_matching if {
+	s := scored(l4_negatives, l4_actions)
+	[[m.line, m.weight] | some m in s] == [[6, 0], [2, -1], [20, 0]]
+	[_by_line(m) | some m in s] == [108, null, 101]
+}
+
+test_status_l4_plus_plus_with_matching_proven if {
+	es := array.concat([ev(1, "2026-08-01", "n.md", 30), ev(1, "2026-08-02", "n.md", 31)], l4_negatives)
+	s := weighted(es, l4_actions)
+	s.status == "proven"
+	s.score == 1
+}
+
+# _by_line(m) is the line of the action that neutralised m, or null.
+_by_line(m) := m.neutralisedBy.line if m.neutralisedBy != null else := null
+
+# _action_date(acts, ref) is the date of the action ref points at.
+_action_date(acts, ref) := a.date if {
+	some a in acts
+	a.line == ref.line
+}
+
+# Every neutralising action is dated on or after the negative it neutralises.
+test_scored_pairings_are_date_valid if {
+	cases := [
+		[l4_negatives, l4_actions],
+		[
+			[ev(-1, "2026-10-01", "n.md", 1), ev(-1, "2026-10-03", "n.md", 3), ev(-1, "2026-10-05", "n.md", 5), ev(-1, "2026-10-07", "n.md", 7)],
+			[done(own, "2026-10-02", 102), done(own, "2026-10-04", 104), done(own, "2026-10-08", 108)],
+		],
+		[
+			[ev(-1, "2026-10-05", "n.md", 5), ev(-1, "2026-10-06", "n.md", 6)],
+			[done(own, "2026-10-01", 101), done(own, "2026-10-02", 102), done(own, "2026-10-07", 107)],
+		],
+	]
+	every cs in cases {
+		every m in scored(cs[0], cs[1]) {
+			_valid_pair(cs[1], m)
+		}
+	}
+	# Second case: 10-07 <- 10-08, 10-03 <- 10-04, 10-01 <- 10-02; 10-05 stays.
+	[_by_line(m) | some m in scored(cases[1][0], cases[1][1])] == [108, null, 104, 102]
+	# Third: only 10-07 can neutralise, and it takes the newest negative.
+	[_by_line(m) | some m in scored(cases[2][0], cases[2][1])] == [107, null]
+}
+
+_valid_pair(_, m) if m.neutralisedBy == null
+
+_valid_pair(acts, m) if _action_date(acts, m.neutralisedBy) >= m.date
+
+test_status_weighted_outside_window_ignored if {
+	weighted([ev(1, "2026-07-01", "n.md", 1)], []).status == "unproven"
 }
 
 # --- gaps -----------------------------------------------------------------

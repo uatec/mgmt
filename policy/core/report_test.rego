@@ -217,7 +217,7 @@ test_to_raise_empty if {
 
 test_gaps_list_open_addressing_actions_only if {
 	open := object.union(action("me", "", "notes/a.md", 1, false), {"addresses": ["collab.planning"]})
-	closed := object.union(action("me", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"]})
+	closed := object.union(action("me", "", "notes/a.md", 2, true), {"addresses": ["collab.planning"], "date": "2026-08-01"}) # before the mark: no neutralising
 	facts := json.patch(base, [
 		{"op": "replace", "path": "/actions", "value": [closed, open]},
 		{"op": "replace", "path": "/evidence", "value": [mark(-1, "2026-09-01", "notes/m.md", 1)]},
@@ -303,7 +303,8 @@ test_review_groups_required_by_theme_newest_first if {
 	[c.id | some t in r.themes; some c in t.competencies] == ["collab.planning", "delivery.ownership", "scope.crossteam"]
 	planning := r.themes[0].competencies[0]
 	planning.title == "Plans"
-	planning.status == "disproven"
+	planning.status == "proven"
+	planning.score == 1
 	locs(planning.positive) == ["notes/b.md:6", "notes/a.md:3"]
 	locs(planning.negative) == ["notes/c.md:6"]
 	# R14 (amended): actions dated from the window start to the cycle's
@@ -384,14 +385,20 @@ explain_marks := [
 	mark(1, "2026-04-02", "notes/e.md", 1), # before since: neither
 ]
 
-test_explain_negative_overrides_latest_decides if {
-	e := report.explain.sam["collab.planning"] with input as with_records("evidence", explain_marks)
+with_scoring(facts, settings) := json.patch(facts, [{
+	"op": "add", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/evidence",
+	"value": settings,
+}])
+
+test_explain_latest_decides if {
+	facts := with_scoring(with_records("evidence", explain_marks), {"minPerCompetency": 1, "scoring": "latest"})
+	e := report.explain.sam["collab.planning"] with input as facts
 	e.person.level == "IC3"
 	e.competency == {"id": "collab.planning", "title": "Plans"}
 	e.required == true
 	e.status == "disproven"
-	e.rule == "negativeOverrides"
-	e.settings == {"minPerCompetency": 1, "negativeOverrides": true}
+	e.rule == "latest"
+	e.settings == {"minPerCompetency": 1, "scoring": "latest"}
 	[e.positives, e.negatives] == [2, 1]
 	e.window.from == "2026-05-01"
 	locs(e.considered) == ["notes/c.md:6", "notes/b.md:9", "notes/b.md:6"]
@@ -399,16 +406,23 @@ test_explain_negative_overrides_latest_decides if {
 	locs(e.outside) == ["notes/d.md:6"]
 }
 
-test_explain_counting_no_single_item_decides if {
-	facts := json.patch(with_records("evidence", explain_marks), [{
-		"op": "add", "path": "/resources/ReviewCycle/ensek-2026-h2/spec/evidence",
-		"value": {"minPerCompetency": 2, "negativeOverrides": false},
-	}])
+# Under weighted (the default) no single mark decides: the score does, and
+# each considered mark carries its weight and what neutralised it.
+test_explain_weighted_score_weights_and_neutralised if {
+	fix := object.union(action("me", "", "notes/f.md", 3, true), {"addresses": ["collab.planning"], "date": "2026-10-02", "text": "fixed it"})
+	facts := json.patch(with_records("evidence", array.concat(explain_marks, [object.union(mark(-1, "2026-08-20", "notes/g.md", 2), {"strength": 2})])), [
+		{"op": "replace", "path": "/actions", "value": [fix]},
+	])
 	e := report.explain.sam["collab.planning"] with input as facts
-	e.status == "proven"
-	e.rule == "counting"
-	e.settings.minPerCompetency == 2
-	[c.decides | some c in e.considered] == [false, false, false]
+	e.rule == "weighted"
+	e.settings == {"minPerCompetency": 1, "scoring": "weighted"}
+	e.score == 0
+	e.status == "unproven"
+	locs(e.considered) == ["notes/c.md:6", "notes/b.md:9", "notes/g.md:2", "notes/b.md:6"]
+	[[c.tag, c.weight] | some c in e.considered] == [["-", 0], ["+", 1], ["--", -2], ["+", 1]]
+	e.considered[0].neutralisedBy == {"file": "notes/f.md", "line": 3, "text": "fixed it"}
+	e.considered[2].neutralisedBy == null
+	[c.decides | some c in e.considered] == [false, false, false, false]
 }
 
 test_explain_not_required_and_empty if {

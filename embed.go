@@ -22,3 +22,9 @@ var CoreReports embed.FS
 //
 //go:embed scaffold
 var Scaffold embed.FS
+
+// NotesCheatSheet is the text `mgmt help notes` prints, mirrored in the
+// README's "Notes cheat sheet" section.
+//
+//go:embed help/notes.txt
+var NotesCheatSheet string

@@ -9,7 +9,7 @@ spec:
     # people: [alex, robin]     # or name people
   evidence:
     minPerCompetency: 1
-    negativeOverrides: true
+    scoring: weighted          # or latest: the most recent mark decides
   inputs:
     - name: self-assessment
       required: true

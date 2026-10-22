@@ -17,7 +17,13 @@ Cycles:
   2026-10-27. Selects sam, priya and jo.
 - `retro-2026-h1`: period 2026-01-01..2026-03-31, no milestones, one required
   input `self-assessment`; selects sam and priya; not active on 2026-10-21 and
-  has no notes in its window.
+  has no notes in its window. It sets `scoring: latest`, so
+  `review sam --cycle retro-2026-h1` and `explain sam feedback --cycle
+  retro-2026-h1` cover the latest rule (no score; the deciding mark flagged).
+
+ensek-2026-h2 and the rolling window use `scoring: weighted` (the default):
+`+` scores 1, `++` 2, `-` -1 and `--` -2, and a negative scores 0 once a
+completed `~x` action dated on or after it neutralises it.
 
 Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
 `notes/2026-W40.md` and `notes/2026-W42.md` end with a `## 1:1 Alex` section.
@@ -26,7 +32,8 @@ Notes: sam's 1:1s are in even weeks W30–W42, priya's in odd weeks W31–W43.
 
 Strong marks: `--planning` at W38:4 and W43:13, `++ownership` at W43:14 and
 `++planning` at W43:15 (sam); `++ownership` at W37:4 and `++crossteam` at
-W43:12 (priya). Each counts as one mark in status. sam is at the top of the
+W43:12 (priya). Each counts as one mark toward `minPerCompetency` and scores
+2 under weighted scoring. sam is at the top of the
 ladder, so W43:14 gives `no-next-level`; W43:15 carries
 `<!-- mgmt:ignore no-next-level -->`, so it gives none. `review` tags strong evidence `++`/`--`; prep's "To raise" lists
 the strong marks since the last 1:1, newest first. `review` and `explain`
@@ -42,12 +49,12 @@ promo golden states readiness or a rating (`TestPromoNeverRates`).
 
 Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 
-| Competency | Status | Why |
-| --- | --- | --- |
-| delivery.ownership | proven | +W30:4, +W36:5; W43:8 and ++W43:14 are outside the window |
-| collab.planning | disproven | -W32:4, +W34:4, --W38:4 (decides); +W42:4, --W43:13 and ++W43:15 are outside the window |
-| scope.crossteam | unproven | touch only (~W32:5, 2026-08-03) |
-| collab.feedback | proven | +W32:6, +W40:4 |
+| Competency | Status | Score | Why |
+| --- | --- | --- | --- |
+| delivery.ownership | proven | 2 | +W30:4, +W36:5; W43:8 and ++W43:14 are outside the window |
+| collab.planning | disproven | -2 | -W32:4 (-1), +W34:4 (+1), --W38:4 (-2); nothing neutralises them: W42:6 addresses planning but is open. +W42:4, --W43:13 and ++W43:15 are outside the window |
+| scope.crossteam | unproven | 0 | touch only (~W32:5, 2026-08-03) |
+| collab.feedback | proven | 2 | +W32:6, +W40:4 |
 
 - Open actions, mine: W42:5 `send him the L4 section` due 2026-10-20 (overdue),
   W42:6 `book a planning pairing session` due 2026-10-30, addressing
@@ -68,8 +75,8 @@ Window 2026-04-01..2026-09-30 (ensek-2026-h2).
 
 ## priya (IC2, since 2026-01-05, cadence 14d)
 
-Everything required is proven: delivery.ownership (+W31:4, ++W37:4) and
-collab.feedback (+W33:4, +W39:4). W43:4 (+ownership) is outside the window.
+Everything required is proven: delivery.ownership (+W31:4, ++W37:4; score 3)
+and collab.feedback (+W33:4, +W39:4; score 2). W43:4 (+ownership) is outside the window.
 
 - Open actions: mine W43:5 due 2026-10-23; theirs W41:7 due 2026-11-06
   (addresses delivery.ownership). Closed: W31:5, W41:6.
@@ -95,8 +102,10 @@ No ReviewCycle selects alex, so the rolling window applies (Decision L):
 inputs section; `prep` shows `(rolling)` and no Cycle section. alex adds no
 lint warnings.
 
-- delivery.ownership proven (+W40:8, 2026-09-28).
-- collab.feedback proven: -W40:9 then +W42:10 (latest positive decides).
+- delivery.ownership proven (+W40:8, 2026-09-28; score 1).
+- collab.feedback proven, score 1: -W40:9 (2026-09-28) is neutralised by the
+  completed W42:11 (`~feedback`, dated 2026-10-12), so it scores 0, and
+  +W42:10 scores 1. `explain alex feedback` shows the working.
 - Actions: closed W42:11 (mine, addresses collab.feedback); open W42:12
   (theirs) due 2026-10-23.
 - Last 1:1 section: W42 (2026-10-12), nothing since. No gaps. Focus:
