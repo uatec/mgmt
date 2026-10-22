@@ -1,14 +1,9 @@
 # Lint — 2026-10-21
 
-0 errors, 19 warnings
+0 errors, 14 warnings
 
 ## Jo Example (jo)
 
-- **competency-untouched**
-  - required competency collab.feedback never touched; nothing in the last 42 days (resources/people.yaml:24)
-  - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:24)
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:24)
-  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:24)
 - **cycle-input-missing**
   - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
@@ -27,8 +22,6 @@
   - action "tidy the runbook" has no due date (notes/2026-W38.md:5)
 - **action-overdue**
   - action "send him the L4 section" was due 2026-10-20 (notes/2026-W42.md:5)
-- **competency-untouched**
-  - required competency scope.crossteam last touched 2026-08-03; nothing in the last 42 days (resources/people.yaml:1)
 - **cycle-input-missing**
   - input okrs not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)
   - input peer-feedback not recorded for cycle ensek-2026-h2 (1 received); peer-nominations is due 2026-10-27 (resources/cycles/ensek-2026-h2.yaml:1)

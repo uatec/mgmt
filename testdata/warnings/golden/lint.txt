@@ -1,13 +1,11 @@
 # Lint — 2026-10-21
 
-0 errors, 16 warnings
+0 errors, 14 warnings
 
 ## jo
 
 - **competency-untouched**
   - required competency collab.planning never touched; nothing in the last 42 days (resources/people.yaml:22)
-  - required competency delivery.ownership never touched; nothing in the last 42 days (resources/people.yaml:22)
-  - required competency scope.crossteam never touched; nothing in the last 42 days (resources/people.yaml:22)
 - **cycle-evidence-thin**
   - gaps remain (collab.planning, delivery.ownership, scope.crossteam) and manager-draft for autumn is due 2026-11-01 (resources/cycle.yaml:1)
 - **cycle-input-missing**

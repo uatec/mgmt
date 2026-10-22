@@ -175,22 +175,6 @@
     },
     {
       "file": "resources/people.yaml",
-      "id": "competency-untouched",
-      "line": 1,
-      "message": "sam: required competency collab.planning never touched; nothing in the last 42 days",
-      "person": "sam",
-      "severity": "warning"
-    },
-    {
-      "file": "resources/people.yaml",
-      "id": "competency-untouched",
-      "line": 1,
-      "message": "sam: required competency scope.crossteam never touched; nothing in the last 42 days",
-      "person": "sam",
-      "severity": "warning"
-    },
-    {
-      "file": "resources/people.yaml",
       "id": "gap-unaddressed",
       "line": 1,
       "message": "sam: gap collab.planning (unproven) has no open action addressing it",
@@ -211,14 +195,6 @@
       "line": 1,
       "message": "sam: gap scope.crossteam (unproven) has no open action addressing it",
       "person": "sam",
-      "severity": "warning"
-    },
-    {
-      "file": "resources/people.yaml",
-      "id": "competency-untouched",
-      "line": 11,
-      "message": "priya: required competency delivery.ownership never touched; nothing in the last 42 days",
-      "person": "priya",
       "severity": "warning"
     },
     {
@@ -247,14 +223,6 @@
     },
     {
       "file": "resources/people.yaml",
-      "id": "competency-untouched",
-      "line": 31,
-      "message": "alex: required competency delivery.ownership never touched; nothing in the last 42 days",
-      "person": "alex",
-      "severity": "warning"
-    },
-    {
-      "file": "resources/people.yaml",
       "id": "gap-unaddressed",
       "line": 31,
       "message": "alex: gap delivery.ownership (unproven) has no open action addressing it",
@@ -267,14 +235,6 @@
       "line": 31,
       "message": "no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d)",
       "person": "alex",
-      "severity": "warning"
-    },
-    {
-      "file": "resources/people.yaml",
-      "id": "competency-untouched",
-      "line": 41,
-      "message": "alexander: required competency delivery.ownership never touched; nothing in the last 42 days",
-      "person": "alexander",
       "severity": "warning"
     },
     {

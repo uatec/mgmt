@@ -301,8 +301,20 @@ test_gap_closed_action_does_not_address if {
 
 # --- competency-untouched -------------------------------------------------
 
+# gap_addressed is gap with an open action on it: still a gap, still never
+# touched, but no gap-unaddressed.
+gap_addressed := patched(gap, {"actions": [act("talk", "2026-10-14", "", false, ["collab.planning"], 9)]})
+
+# Ruling L2: gap-unaddressed already says it; competency-untouched stays
+# silent for the same (person, competency).
+test_untouched_silent_when_gap_unaddressed if {
+	count(fired(gap, "gap-unaddressed")) == 1
+	count(fired(gap, "competency-untouched")) == 0
+}
+
 test_untouched_never if {
-	fs := fired(gap, "competency-untouched")
+	count(fired(gap_addressed, "gap-unaddressed")) == 0
+	fs := fired(gap_addressed, "competency-untouched")
 	count(fs) == 1
 	some f in fs
 	f.line == 1
@@ -346,7 +358,7 @@ test_untouched_last_touch_exactly_limit_ago if {
 
 test_untouched_since_exactly_limit_ago if {
 	# managed for exactly 42 days: the threshold is reached (Decision M)
-	d := with_sam(gap, {"since": "2026-09-09"})
+	d := with_sam(gap_addressed, {"since": "2026-09-09"})
 	count(fired(d, "competency-untouched")) == 1
 }
 

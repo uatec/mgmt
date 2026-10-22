@@ -17,21 +17,16 @@ resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: i
 resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: input peer-feedback not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
 resources/cycles/ensek-2026-h2.yaml:1: warning cycle-input-missing [sam]: sam: input self-assessment not recorded for cycle ensek-2026-h2 (0 received); peer-nominations is due 2026-10-27
 resources/framework.yaml:1: error token-duplicate: token "plan" is claimed by collab.planning, scope.crossteam
-resources/people.yaml:1: warning competency-untouched [sam]: sam: required competency collab.planning never touched; nothing in the last 42 days
-resources/people.yaml:1: warning competency-untouched [sam]: sam: required competency scope.crossteam never touched; nothing in the last 42 days
 resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap collab.planning (unproven) has no open action addressing it
 resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap delivery.ownership (unproven) has no open action addressing it
 resources/people.yaml:1: warning gap-unaddressed [sam]: sam: gap scope.crossteam (unproven) has no open action addressing it
-resources/people.yaml:11: warning competency-untouched [priya]: priya: required competency delivery.ownership never touched; nothing in the last 42 days
 resources/people.yaml:11: warning gap-unaddressed [priya]: priya: gap delivery.ownership (unproven) has no open action addressing it
 resources/people.yaml:11: warning oneonone-overdue [priya]: no 1:1 section for priya at all; managed since 2026-05-01 (cadence 14d)
 resources/people.yaml:21: warning oneonone-overdue [jo]: no 1:1 section for jo at all; managed since 2026-05-01 (cadence 14d)
 resources/people.yaml:21: error ref-unknown [jo]: person "jo": level "IC9" is not on the ladder of framework "eng" (IC2, IC3)
-resources/people.yaml:31: warning competency-untouched [alex]: alex: required competency delivery.ownership never touched; nothing in the last 42 days
 resources/people.yaml:31: warning gap-unaddressed [alex]: alex: gap delivery.ownership (unproven) has no open action addressing it
 resources/people.yaml:31: warning oneonone-overdue [alex]: no 1:1 section for alex at all; managed since 2026-05-01 (cadence 14d)
 resources/people.yaml:41: error alias-duplicate [alexander]: name or alias "alex" is shared by alex, alexander
-resources/people.yaml:41: warning competency-untouched [alexander]: alexander: required competency delivery.ownership never touched; nothing in the last 42 days
 resources/people.yaml:41: warning gap-unaddressed [alexander]: alexander: gap delivery.ownership (unproven) has no open action addressing it
 resources/people.yaml:41: warning oneonone-overdue [alexander]: no 1:1 section for alexander at all; managed since 2026-05-01 (cadence 14d)
-11 errors, 25 warnings
+11 errors, 20 warnings

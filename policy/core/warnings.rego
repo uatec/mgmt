@@ -92,14 +92,23 @@ _has_open_action(p, c) if {
 	_open(a)
 }
 
+# _gap_unaddressed(p, c): c is a gap for p with no open action on it.
+_gap_unaddressed(p, c) if {
+	some g in derive.gaps[p]
+	g.competency == c
+	not _has_open_action(p, c)
+}
+
 warn contains f if {
 	some p, gs in derive.gaps
 	some g in gs
-	not _has_open_action(p, g.competency)
+	_gap_unaddressed(p, g.competency)
 	f := _at("Person", p, "gap-unaddressed", p, sprintf("%s: gap %s (%s) has no open action addressing it", [p, g.competency, g.status]))
 }
 
 # --- competency-untouched -------------------------------------------------
+
+# Silent for a (person, competency) that has gap-unaddressed (Ruling L2).
 
 _touched_since(p, c, date) if derive.last_touch[p][c] >= date
 
@@ -114,6 +123,7 @@ warn contains f if {
 	cutoff := lib.add_days(_now, 0 - limit)
 	some c in reqs
 	not _touched_since(p, c, cutoff)
+	not _gap_unaddressed(p, c) # Ruling L2: gap-unaddressed already says it
 	f := _at("Person", p, "competency-untouched", p, sprintf("%s: required competency %s %s; nothing in the last %d days", [p, c, _last_touch_text(p, c), limit]))
 }
 

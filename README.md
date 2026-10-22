@@ -256,7 +256,8 @@ Errors: `schema-invalid`, `ref-unknown`, `token-duplicate`, `alias-duplicate`,
 `input-unknown`.
 
 Warnings: `section-unmarked`, `negative-unaddressed`, `gap-unaddressed`,
-`competency-untouched`, `action-overdue`, `action-no-due`, `action-duplicate`,
+`competency-untouched` (not raised for a competency that already has
+`gap-unaddressed`), `action-overdue`, `action-no-due`, `action-duplicate`,
 `oneonone-overdue`, `cycle-input-missing`, `cycle-evidence-thin`,
 `no-next-level` (a `++` mark for a person already at the top level of their
 framework's ladder).
