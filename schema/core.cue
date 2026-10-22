@@ -80,8 +80,8 @@ import "time"
 		period: {from: #Date, to: #Date}
 		selector: #Selector
 		evidence: {
-			minPerCompetency:  int & >=1 | *1
-			negativeOverrides: bool | *true
+			minPerCompetency: int & >=1 | *1
+			scoring:          *"weighted" | "latest"
 		}
 		inputs?: [...{
 			name:      string

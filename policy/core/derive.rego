@@ -132,7 +132,7 @@ _window_range(p) := [c.spec.period.from, c.spec.period.to, cycle[p]] if {
 
 settings[p] := {
 	"minPerCompetency": object.get(ev, "minPerCompetency", 1),
-	"negativeOverrides": object.get(ev, "negativeOverrides", true),
+	"scoring": object.get(ev, "scoring", "weighted"),
 } if {
 	some p in object.keys(_persons)
 	ev := _cycle_evidence(p)
@@ -217,42 +217,81 @@ _in_window(w, date) if {
 	date <= w.to
 }
 
+# scored[p][c] is the in-window marks, newest first, each with its weight
+# (+1, +2, -1, -2 by polarity and strength; 0 when neutralised) and the
+# completed action that neutralised it (or null).
+#
+# A negative is neutralised only by a completed action addressing it. For
+# the k completed actions of p addressing c dated on or before now (in or
+# after the window), the k most recent eligible negatives (those with a
+# completed action dated on or after them) are neutralised, the i-th most
+# recent paired with the i-th most recent action.
+scored[p][c] := [object.union(m, {"weight": _weight(m, nb), "neutralisedBy": nb}) |
+	some i, m in newest
+	nb := object.get(paired, i, null)
+] if {
+	some p, comps in marks
+	some c, ms in comps
+	newest := array.reverse(ms)
+	done := _completed(p, c)
+	eligible := [i | some i, m in newest; m.polarity < 0; _eligible(m, done)]
+	paired := {i: _action_ref(done[j]) | some j, i in eligible; j < count(done)}
+}
+
+# _completed(p, c) is p's completed actions addressing c, dated up to now,
+# newest first by [date, file, line].
+_completed(p, c) := array.reverse(_sorted_by_loc([a |
+	some a in actions_by[p]
+	a.done == true
+	c in a.addresses
+	a.date <= _now
+]))
+
+_eligible(m, done) if {
+	count(done) > 0
+	m.date <= done[0].date
+}
+
+_action_ref(a) := {"file": a.file, "line": a.line, "text": a.text}
+
+_weight(_, nb) := 0 if nb != null
+
+_weight(m, null) := m.polarity * object.get(m, "strength", 1)
+
 status[p][c] := {
 	"status": decision[0],
 	"positives": pos,
 	"negatives": neg,
+	"score": score,
 	"decidedBy": decision[1],
-	"rule": _rule_name(s.negativeOverrides),
+	"rule": s.scoring,
 } if {
-	some p, comps in marks
+	some p, comps in scored
 	some c, ms in comps
 	s := settings[p]
 	pos := count([m | some m in ms; m.polarity > 0])
 	neg := count([m | some m in ms; m.polarity < 0])
-	decision := _decide(ms, pos, neg, s.minPerCompetency, s.negativeOverrides)
+	score := sum([m.weight | some m in ms])
+	decision := _decide(ms, pos, score, s.minPerCompetency, s.scoring)
 }
 
-_rule_name(true) := "negativeOverrides"
-
-_rule_name(false) := "counting"
-
-# _decide returns [status, decidedBy].
-_decide(ms, pos, _, minimum, true) := ["unproven", null] if {
+# _decide returns [status, decidedBy] for the newest-first scored marks.
+# latest: the most recent mark decides.
+_decide(ms, pos, _, minimum, "latest") := ["unproven", null] if {
 	count(ms) == 0
-} else := ["disproven", _loc(ms[count(ms) - 1])] if {
-	ms[count(ms) - 1].polarity < 0
-} else := ["proven", _loc(ms[count(ms) - 1])] if {
+} else := ["disproven", _loc(ms[0])] if {
+	ms[0].polarity < 0
+} else := ["proven", _loc(ms[0])] if {
 	pos >= minimum
 } else := ["unproven", null]
 
-_decide(ms, pos, neg, minimum, false) := ["unproven", null] if {
-	count(ms) == 0
-} else := ["proven", null] if {
-	pos > neg
+# weighted: proven above 0 with enough positive marks; disproven below 0.
+_decide(_, pos, score, minimum, "weighted") := ["proven", null] if {
+	score > 0
 	pos >= minimum
-} else := ["unproven", null] if {
-	pos > neg
-} else := ["disproven", null]
+} else := ["disproven", null] if {
+	score < 0
+} else := ["unproven", null]
 
 _loc(m) := {"file": m.file, "line": m.line}
 

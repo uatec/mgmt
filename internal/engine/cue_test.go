@@ -79,6 +79,8 @@ func TestValidateSchemaInvalid(t *testing.T) {
 		{"unknown field", map[string]string{"b.yaml": person("  colour: red\n")}, "resources/b.yaml", 1, ""},
 		{"wrong apiVersion", map[string]string{"b.yaml": strings.Replace(person(""), "mgmt/v1alpha1", "mgmt/v2", 1)}, "resources/b.yaml", 1, ""},
 		{"min zero", map[string]string{"b.yaml": cycle("0")}, "resources/b.yaml", 1, ""},
+		{"negativeOverrides is gone", map[string]string{"b.yaml": cycle("1, negativeOverrides: true")}, "resources/b.yaml", 1, "negativeOverrides"},
+		{"unknown scoring", map[string]string{"b.yaml": cycle("1, scoring: counting")}, "resources/b.yaml", 1, "scoring"},
 		{"empty selector", map[string]string{"b.yaml": strings.Replace(cycle("1"), "{people: [sam]}", "{}", 1)}, "resources/b.yaml", 1, ""},
 		{"unknown kind", map[string]string{"b.yaml": "apiVersion: mgmt/v1alpha1\nkind: Team\nmetadata:\n  name: t\nspec: {}\n"}, "resources/b.yaml", 1, ""},
 		{"second doc line", map[string]string{"b.yaml": person("") + "---\n" + strings.Replace(person(""), "sam", "BAD NAME", 1)}, "resources/b.yaml", 10, ""},
