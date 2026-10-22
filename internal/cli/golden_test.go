@@ -307,6 +307,25 @@ func TestUsageErrors(t *testing.T) {
 	}
 }
 
+// TestPromoHasNoCycle: the packet spans cycles (Decision U), so promo takes
+// no --cycle, even naming a real cycle.
+func TestPromoHasNoCycle(t *testing.T) {
+	root := filepath.Join("..", "..", "testdata", "team")
+	var stdout, stderr bytes.Buffer
+	if code := Run([]string{"--now", "2026-10-21", "promo", "sam", "--cycle", "ensek-2026-h2"}, root, &stdout, &stderr); code != 2 {
+		t.Errorf("exit = %d, want 2", code)
+	}
+	if want := "mgmt: promo: flag provided but not defined: -cycle\n"; !strings.HasPrefix(stderr.String(), want) {
+		t.Errorf("stderr = %q, want prefix %q", stderr.String(), want)
+	}
+	if strings.Contains(usage, "promo <person> [--cycle") {
+		t.Errorf("usage still offers promo --cycle")
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("stdout = %q", stdout.String())
+	}
+}
+
 func TestPlural(t *testing.T) {
 	cases := map[[2]int]string{
 		{1, 1}: "1 error, 1 warning",

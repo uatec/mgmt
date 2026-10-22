@@ -197,7 +197,7 @@ and `mgmt review sam --out sam.md`.
 | `mgmt lint [--strict] [--format text\|flat\|json]` | print errors and warnings; exit 2 on errors, 1 on warnings with `--strict`, else 0. `text` (default) is markdown: errors grouped by id first, then each person's warnings grouped by id, each with its `file:line`; `flat` is one `file:line: severity id [person]: message` line per finding, for editors and grep |
 | `mgmt prep <person> [--cycle <name>]` | 1:1 prep sheet |
 | `mgmt review <person> [--cycle <name>]` | review evidence pack |
-| `mgmt promo <person> [--cycle <name>]` | draft promotion packet: for each next-level competency, both descriptors and the `++` evidence since the person reached their level, then the competencies with no `++` yet; collected evidence, never a recommendation |
+| `mgmt promo <person>` | draft promotion packet: for each next-level competency, both descriptors and the `++` evidence since the person reached their level, then the competencies with no `++` yet; collected evidence, never a recommendation |
 | `mgmt status [--cycle <name>] [--format markdown\|yaml]` | team matrix, then per active cycle the next milestone and three checks (evidence gaps, missing inputs, overdue actions) listing who and what; `yaml` prints the checks as Kubernetes-style `status.conditions` for scripts |
 | `mgmt explain <person> <competency> [--cycle <name>]` | why a competency has its status |
 | `mgmt report <name> [<person>]` | run a workspace report template (`reports/<name>.tmpl`) |

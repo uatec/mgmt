@@ -31,7 +31,7 @@ commands:
                                        print errors and warnings
   prep <person> [--cycle NAME]         print the 1:1 prep sheet
   review <person> [--cycle NAME]       print the review evidence pack
-  promo <person> [--cycle NAME]        print a draft promotion packet (++ evidence for the next level)
+  promo <person>                       print a draft promotion packet (++ evidence for the next level)
   explain <person> <competency> [--cycle NAME]
                                        explain why a competency has its status
   status [--cycle NAME] [--format markdown|yaml]
@@ -76,7 +76,7 @@ func Run(args []string, root string, stdout, stderr io.Writer) int {
 	case "review":
 		code = runReport("review", rest[1:], "<person>", root, *now, &buf, stderr)
 	case "promo":
-		code = runReport("promo", rest[1:], "<person>", root, *now, &buf, stderr)
+		code = runPromo(rest[1:], root, *now, &buf, stderr)
 	case "explain":
 		code = runReport("explain", rest[1:], "<person> <competency>", root, *now, &buf, stderr)
 	case "status":
@@ -213,6 +213,21 @@ func runReport(name string, args []string, argUsage, root, now string, stdout, s
 		return usageError(stderr, fmt.Sprintf("%s takes %s", name, argUsage))
 	}
 	return renderReport(name, name, pos, cycle, true, root, now, stdout, stderr)
+}
+
+// runPromo parses "promo <person>". The packet spans cycles (Decision U), so
+// it takes no --cycle.
+func runPromo(args []string, root, now string, stdout, stderr io.Writer) int {
+	fl := flag.NewFlagSet("promo", flag.ContinueOnError)
+	fl.SetOutput(io.Discard)
+	pos, err := parseInterspersed(fl, args)
+	if err != nil {
+		return usageError(stderr, "promo: "+err.Error())
+	}
+	if len(pos) != 1 {
+		return usageError(stderr, "promo takes <person>")
+	}
+	return renderReport("promo", "promo", pos, "", true, root, now, stdout, stderr)
 }
 
 // statusTemplates maps status --format to its template. Both format the
