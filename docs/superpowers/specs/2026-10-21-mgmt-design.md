@@ -174,7 +174,7 @@ Notes stay freeform weekly markdown. Person and date are inherited from context,
 
 **Person context**
 
-- A heading at any level sets the current person when it contains a Person's name or alias as a whole word, case-insensitive (`## 1:1 Sam`, `### Sam`).
+- A heading at any level sets the current person when it contains a Person's name, alias or displayName as a whole word, case-insensitive (`## 1:1 Sam`, `### Sam`, `## [[Sam Example]]`).
 - Context lasts until the next heading at the same or a higher level. A heading that names no person clears it.
 - `@<person>` on a line attributes that line to that person, overriding context. This allows marks in team sections.
 - A heading naming two people is an error unless every marked line under it carries `@<person>`.

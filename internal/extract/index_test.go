@@ -100,3 +100,25 @@ func TestFrameworks(t *testing.T) {
 		t.Errorf("Frameworks =\n%+v\nwant\n%+v", got, want)
 	}
 }
+
+// A heading naming a person by displayName, here as an Obsidian wikilink,
+// attributes the lines under it; @ tokens still need a name or alias.
+func TestHeadingMatchesDisplayName(t *testing.T) {
+	idx := NewIndex([]load.Resource{
+		res("Person", "cb", map[string]any{"displayName": "Craig Bartram", "aliases": []any{"CB"}}),
+	})
+	if got := idx.HeadingPersons("[[Craig Bartram]]"); !reflect.DeepEqual(got, []string{"cb"}) {
+		t.Errorf("heading persons = %v", got)
+	}
+	if _, ok := idx.Person("Craig Bartram"); ok {
+		t.Error("displayName resolved as an @ token")
+	}
+	if slices.Contains(idx.PersonNames(), "craig bartram") {
+		t.Errorf("person names = %v", idx.PersonNames())
+	}
+	src := "## [[Craig Bartram]]\n- [ ] a new action\n"
+	got := Extract([]load.NoteFile{{Path: "notes/2026-10-26.md", Source: []byte(src)}}, idx)
+	if len(got.Actions) != 1 || got.Actions[0].Person != "cb" || got.Actions[0].Owner != "me" {
+		t.Errorf("actions = %+v, diagnostics = %+v", got.Actions, got.Diagnostics)
+	}
+}
