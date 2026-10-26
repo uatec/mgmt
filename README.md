@@ -296,7 +296,7 @@ Scoring (weighted, the default; a cycle may set scoring: latest)
   A heading can carry its own date (`## Sam 2026-10-22`, `## Sam (Wed 22 Oct)`).
 - YAML front matter (a leading `---` block closed by `---` or `...`) is ignored.
   Obsidian links work in headings: `## 1:1 [[Sam]]` sets Sam.
-- A heading that names a Person (by name or alias) sets the person for the lines
+- A heading that names a Person (by name, alias or displayName) sets the person for the lines
   under it. `@person` on a line attributes that line to someone else.
 - `+x` is positive evidence, `-x` negative evidence and `~x` a neutral "discussed"
   touch, where `x` is a competency id or token.

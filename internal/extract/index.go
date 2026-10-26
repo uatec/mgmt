@@ -23,6 +23,8 @@ const (
 type Index struct {
 	persons   map[string]string          // lower-case name or alias -> person name
 	names     []string                   // lower-case names and aliases, sorted
+	headings  map[string]string          // persons, plus lower-case displayName -> person name
+	headNames []string                   // keys of headings, sorted
 	framework map[string]string          // person -> framework name
 	closure   map[string]map[string]bool // framework -> itself and its includes, transitively
 	tokens    map[string]*tokenMap       // framework -> tokens of its effective competencies
@@ -47,6 +49,7 @@ type cycle struct {
 func NewIndex(resources []load.Resource) *Index {
 	idx := &Index{
 		persons:   map[string]string{},
+		headings:  map[string]string{},
 		framework: map[string]string{},
 		closure:   map[string]map[string]bool{},
 		tokens:    map[string]*tokenMap{},
@@ -77,14 +80,22 @@ func NewIndex(resources []load.Resource) *Index {
 				idx.persons[strings.ToLower(a)] = r.Name
 			}
 			idx.framework[r.Name], _ = spec["framework"].(string)
+			if d, _ := spec["displayName"].(string); strings.TrimSpace(d) != "" {
+				idx.headings[strings.ToLower(strings.TrimSpace(d))] = r.Name
+			}
 		case "ReviewCycle":
 			idx.cycles = append(idx.cycles, newCycle(r.Name, spec))
 		}
 	}
-	for n := range idx.persons {
+	for n, p := range idx.persons {
 		idx.names = append(idx.names, n)
+		idx.headings[n] = p // a name or alias wins over another's displayName
 	}
 	sort.Strings(idx.names)
+	for n := range idx.headings {
+		idx.headNames = append(idx.headNames, n)
+	}
+	sort.Strings(idx.headNames)
 	sort.Slice(idx.cycles, func(i, j int) bool { return idx.cycles[i].name < idx.cycles[j].name })
 	return idx
 }
@@ -228,14 +239,15 @@ func (idx *Index) Person(body string) (string, bool) {
 // IsMe reports whether an @-token body is one of Workspace.spec.me.
 func (idx *Index) IsMe(body string) bool { return idx.me[strings.ToLower(body)] }
 
-// HeadingPersons returns the sorted, distinct persons whose name or alias
-// appears in text as a whole word (bounded by non-letters and non-digits).
+// HeadingPersons returns the sorted, distinct persons whose name, alias or
+// displayName appears in text as a whole word (bounded by non-letters and
+// non-digits), so "## [[Craig Bartram]]" names the person displayed so.
 func (idx *Index) HeadingPersons(text string) []string {
 	lower := strings.ToLower(text)
 	seen := map[string]bool{}
 	out := []string{}
-	for _, n := range idx.names {
-		if p := idx.persons[n]; !seen[p] && containsWord(lower, n) {
+	for _, n := range idx.headNames {
+		if p := idx.headings[n]; !seen[p] && containsWord(lower, n) {
 			seen[p] = true
 			out = append(out, p)
 		}
